@@ -55,6 +55,12 @@ public class ChordThread implements Runnable {
 
                         break;
                     }
+                    case Chord.STORE: {
+                        String response = this.store(content);
+                        System.out.println("Store: " + response);
+                        socketWriter.println(response);
+                        break;
+                    }
                     case Chord.FIND_NODE: {
                         String response = this.findNode(content);
                         System.out.println("Sent: " + response);
@@ -116,6 +122,10 @@ public class ChordThread implements Runnable {
         }
 
         System.out.println("Client connection terminated on port " + this.socket.getLocalPort());
+    }
+
+    private String store(String query){
+        return "response";
     }
 
     private String findValue(String query) {
