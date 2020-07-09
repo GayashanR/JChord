@@ -124,10 +124,6 @@ public class ChordThread implements Runnable {
         System.out.println("Client connection terminated on port " + this.socket.getLocalPort());
     }
 
-    private String store(String query){
-        return "response";
-    }
-
     private String findValue(String query) {
         // Get long of query
         SHA1Hasher queryHasher = new SHA1Hasher(query);
@@ -203,8 +199,76 @@ public class ChordThread implements Runnable {
         return response;
     }
 
+    private String store(String fileHash){
+        // Hash file name
+        SHA1Hasher qh = new SHA1Hasher(fileHash);
+        long queryId = qh.getLong();
+
+        if (queryId >= Chord.RING_SIZE) {
+            queryId -= Chord.RING_SIZE;
+        }
+
+        String response = "Not found.";
+
+        if (this.doesQueryIdBelongToCurrentNode(queryId)) {
+            response = Chord.STORE + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+        } else if(this.doesQueryIdBelongToNextNode(queryId)) {
+            response = Chord.STORE + ":" +  this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
+        } else { // traverse finger tables
+            long minimumDistance = Chord.RING_SIZE;
+            Finger closestPredecessor = null;
+
+            this.chordNode.acquire();
+
+            for (Finger finger : this.chordNode.getFingers().values()) {
+                long distance;
+
+                if (queryId >= finger.getId()) {
+                    distance = queryId - finger.getId();
+                } else {
+                    distance = queryId + Chord.RING_SIZE - finger.getId();
+                }
+
+                if (distance < minimumDistance) {
+                    minimumDistance = distance;
+                    closestPredecessor = finger;
+                }
+            }
+
+            System.out.println("queryid: " + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
+
+            try {
+                Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
+                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                // Send query to chord
+                socketWriter.println(Chord.FIND_NODE + ":" + queryId);
+                System.out.println("Sent: " + Chord.FIND_NODE + ":" + queryId);
+
+                // Read response from chord
+                String serverResponse = socketReader.readLine();
+                System.out.println("Response from node " + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
+
+                response = serverResponse;
+
+                // Close connections
+                socketWriter.close();
+                socketReader.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            this.chordNode.release();
+        }
+
+        return response;
+    }
+
     private String findNode(String query) {
         long queryId = Long.valueOf(query);
+        System.out.println("######" + query);
 
         // Wrap the queryid if it is as big as the ring
         if (queryId >= Chord.RING_SIZE) {
