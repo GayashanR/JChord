@@ -15,10 +15,13 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 
@@ -105,6 +108,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         lblDownPct = new javax.swing.JLabel();
         progressBar = new javax.swing.JProgressBar();
         lblDownloadStatus = new javax.swing.JLabel();
+        lblNodeId = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         viewMenu = new javax.swing.JMenu();
@@ -211,6 +215,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
         lblDownloadStatus.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         lblDownloadStatus.setText("Download Percentage");
 
+        lblNodeId.setText(".");
+        lblNodeId.setName(""); // NOI18N
+
         jMenu1.setText("File");
         jMenuBar1.add(jMenu1);
 
@@ -266,13 +273,6 @@ public class ChordMainFrame extends javax.swing.JFrame {
                                 .addComponent(txtBSIP, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(30, 30, 30)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(btnLeave, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(btnJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(lblJoinStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addContainerGap())
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 40, Short.MAX_VALUE)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -281,7 +281,17 @@ public class ChordMainFrame extends javax.swing.JFrame {
                                 .addContainerGap())
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(jLabel10)
-                                .addGap(71, 71, 71))))))
+                                .addGap(71, 71, 71))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(30, 30, 30)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(lblNodeId)
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(btnLeave, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(btnJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(lblJoinStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap())))
             .addComponent(jSeparator4)
             .addComponent(jSeparator5)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
@@ -328,7 +338,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 5, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel2)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel2)
+                    .addComponent(lblNodeId))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
@@ -424,7 +436,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         RegisterResponse regRes = register();
         if(!regRes.isInitialNode())
         {
-            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps()[0], regRes.getpeerPorts()[0]+"");
+            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps(), regRes.getpeerPorts());
         }
         else
         {
@@ -432,6 +444,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         }
         
         lblJoinStatus.setText(resMsg);
+        lblNodeId.setText(String.valueOf(node.getId()));
         
         
     }//GEN-LAST:event_btnJoinActionPerformed
@@ -591,10 +604,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
                 //  break;
 
                 default:
-                    int number = Integer.parseInt(noOfNodes.trim());
-                    peerIps = new String[number];
-                    peerPorts = new int[number];
-                    System.out.println("number:" + number);
+                    peerIps = new String[2];
+                    peerPorts = new int[2];
+                    
                     peerIps[0] = splitted[3];
                     peerPorts[0] = Integer.parseInt(splitted[4]);
                     
@@ -639,6 +651,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
     private javax.swing.JLabel lblDownPct;
     private javax.swing.JLabel lblDownloadStatus;
     private javax.swing.JLabel lblJoinStatus;
+    private javax.swing.JLabel lblNodeId;
     private javax.swing.JList<String> lstSearchedFiles;
     private javax.swing.JList<String> lstSharedFiles;
     private javax.swing.JMenuItem menuItemFingerTable;

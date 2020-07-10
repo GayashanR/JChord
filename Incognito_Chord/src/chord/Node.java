@@ -76,18 +76,14 @@ public class Node {
      *
      * @param address               The address of this node
      * @param port                  The port that this Chord node needs to listen on
-     * @param existingNodeAddress   The address of the existing ring member
-     * @param existingNodePort      The port of the existing ring member
+     * @param existingNodeIps       The IP addresses of the existing ring members
+     * @param existingNodePorts      The ports of the existing ring members
      */
-    public Node(String address, String port, String existingNodeAddress, String existingNodePort) {
+    public Node(String address, String port, String[] existingNodeIps, int[] existingNodePorts) {
         // Set node fields
         this.address = address;
         this.port = Integer.valueOf(port);
-
-        // Set contact node fields
-        this.existingNodeAddress = existingNodeAddress;
-        this.existingNodePort = Integer.valueOf(existingNodePort);
-
+        
         // Hash address
         SHA1Hasher sha1Hasher = new SHA1Hasher(this.address + ":" + this.port);
         this.id = sha1Hasher.getLong();
@@ -96,12 +92,18 @@ public class Node {
         // Logging
         System.out.println("Joining the Chord ring");
         System.out.println("You are listening on port " + this.port);
-        System.out.println("Connected to existing node " + this.existingNodeAddress + ":" + this.existingNodePort);
         System.out.println("Your position is " + this.hex + " (" + this.id + ")");
 
-        // Initialize finger table and successors
-        this.initializeFingers();
-        this.initializeSuccessors();
+        for(int i=0; i<existingNodeIps.length; i++){
+            // Set contact node fields
+            this.existingNodeAddress = existingNodeIps[i];
+            this.existingNodePort = existingNodePorts[i];
+            System.out.println("Connected to existing node " + this.existingNodeAddress + ":" + this.existingNodePort);
+
+            // Initialize finger table and successors
+            this.initializeFingers();
+            this.initializeSuccessors();
+        }
 
         // Start listening for connections and heartbeats from neighbors
         new Thread(new NodeListener(this)).start();
@@ -123,7 +125,7 @@ public class Node {
             // Open connection to contact node
             DatagramSocket socket;
             try {
-                socket = new DatagramSocket(Config.MY_PORT);
+                socket = new DatagramSocket();
 
                 // Open reader/writer to chord node
                 BigInteger bigQuery = BigInteger.valueOf(2L);
@@ -192,7 +194,7 @@ public class Node {
         if (!this.address.equals(this.firstSuccessor.getAddress()) || (this.port != this.firstSuccessor.getPort())) {
             DatagramSocket socket;
             try {
-                socket = new DatagramSocket(Config.MY_PORT);
+                socket = new DatagramSocket();
 
                 // Tell successor that this node is its new predecessor
                 String message = Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort();
