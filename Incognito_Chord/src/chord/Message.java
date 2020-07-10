@@ -5,6 +5,7 @@
  */
 package chord;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 /**
@@ -17,33 +18,33 @@ public class Message {
     public Message(MessageType type, String ip, int port, String name){
 
         switch(type){
-            case REG:message = appendLength("REG"+" "+ip+" "+port+" "+name);
+            case REG:message = appendLength(Chord.REG+" "+ip+" "+port+" "+name);
                 break;
-            case UNREG:message=appendLength("UNREG"+" "+ip+" "+port+" "+name);
+            case UNREG:message=appendLength(Chord.UNREG+" "+ip+" "+port+" "+name);
                 break;
-            case JOIN:message=appendLength("JOIN"+" "+ip+" "+port+" "+name);
+            case JOIN:message=appendLength(Chord.JOIN+" "+ip+" "+port+" "+name);
                 break;
-            case JOINOK: message=appendLength("JOINOK"+" "+ip+" "+port+" "+0);
+            case JOINOK: message=appendLength(Chord.JOINOK+" "+ip+" "+port+" "+0);
                 break;
             case FILES:
-                message = appendLength("FILES"+" "+ip+" "+port+" "+name);
+                message = appendLength(Chord.FILES+" "+ip+" "+port+" "+name);
                 break;
             case SER:
             {
                 String fileName = name;
-                message=appendLength("SER"+" "+ip+" "+port+" "+fileName);
+                message=appendLength(Chord.SER+" "+ip+" "+port+" "+fileName);
                 break;
             }
-            case INQUIRE: message= appendLength("INQUIRE"+" "+ip+" "+port);
+            case INQUIRE: message= appendLength(Chord.INQUIRE+" "+ip+" "+port);
                 break; 
-            case INQUIREOK: message= appendLength("INQUIREOK"+" "+ip+" "+port);
+            case INQUIREOK: message= appendLength(Chord.INQUIREOK+" "+ip+" "+port);
                 break;
             case LEAVE:
                 String peerIpPort = name;
                 if(peerIpPort!=null){
-                    message=appendLength("LEAVE"+" "+ip+" "+port+" "+name);
+                    message=appendLength(Chord.LEAVE+" "+ip+" "+port+" "+name);
                 }else{
-                    message=appendLength("LEAVE"+" "+ip+" "+port+" "+"CHILD-LEAVING");
+                    message=appendLength(Chord.LEAVE+" "+ip+" "+port+" "+"CHILD-LEAVING");
                 }
                 break;
         }
@@ -51,18 +52,25 @@ public class Message {
     
     public Message(MessageType type, int success){
         switch(type){
-            case JOINOK: message=appendLength("JOINOK"+" "+success);
+            case JOINOK: message=appendLength(Chord.JOINOK+" "+success);
                 break;
 //            case SEROK: message=appendLength("SEROK"+" "+success);
 //                break;
         }
     }
     
+    static public String customFormat(String pattern, double value ) {
+      DecimalFormat myFormatter = new DecimalFormat(pattern);
+      String output = myFormatter.format(value);
+      return output;
+      //System.out.println(value + "  " + pattern + "  " + output);
+   }
+    
     //public Message(MessageType type,String searchKey){
     public Message(MessageType type,String searchKey,String intermediateIp,int intermediatePort){
         switch(type){
             //case SEROK: message=appendLength("SEROK"+" "+"0"+" "+searchKey);
-            case SEROK: message=appendLength("SEROK"+" "+"0"+" "+searchKey+" "+intermediateIp+" "+intermediatePort);
+            case SEROK: message=appendLength(Chord.SEROK+" "+"0"+" "+searchKey+" "+intermediateIp+" "+intermediatePort);
                 break;        
         }
     }
@@ -70,17 +78,17 @@ public class Message {
     public Message(MessageType type, String ip, int port){
         switch (type){
             case LEAVE:
-                message = appendLength("LEAVE"+" "+ip+" "+port);
+                message = appendLength(Chord.LEAVE+" "+ip+" "+port);
                 break;
             case LEAVEOK:
-                message = appendLength("LEAVEOK"+" "+ip+" "+port);
+                message = appendLength(Chord.LEAVEOK+" "+ip+" "+port);
         }
     }
     
     public Message(MessageType type, String ip, int port, String fileNanme, int hops){
         switch(type){
             case SER:
-                message=appendLength("SER"+" "+ip+" "+port+" "+fileNanme+" "+hops);
+                message=appendLength(Chord.SER+" "+ip+" "+port+" "+fileNanme+" "+hops);
                 break;
         }
     }
@@ -97,7 +105,7 @@ public class Message {
                     filesString = filesString +" "+ file;
                 }
                 //message=appendLength("SEROK"+" "+noOfFiles+" "+fileDestinationIp+" "+fileDestinationPort+" "+hops+" "+filesString);
-                message=appendLength("SEROK"+" "+noOfFiles+" "+fileDestinationIp+" "+fileDestinationPort+" "+hops+" "+filesString+" "+intermediateIp+" "+intermediatePort);
+                message=appendLength(Chord.SEROK+" "+noOfFiles+" "+fileDestinationIp+" "+fileDestinationPort+" "+hops+" "+filesString+" "+intermediateIp+" "+intermediatePort);
                 break;
         
             }
@@ -109,7 +117,7 @@ public class Message {
         
             case SEROK: 
             {
-                message=appendLength("SEROK"+" "+noOfFiles+" "+fileDestinationIp+" "+fileDestinationPort+" "+hops+" "+fileString+" "+intermediateIp+" "+intermediatePort);
+                message=appendLength(Chord.SEROK+" "+noOfFiles+" "+fileDestinationIp+" "+fileDestinationPort+" "+hops+" "+fileString+" "+intermediateIp+" "+intermediatePort);
                 break;
         
             }
