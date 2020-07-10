@@ -5,15 +5,22 @@
  */
 package chord;
 
+import static chord.Sender.data;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.math.BigInteger;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -114,13 +121,11 @@ public class Node {
             }
         } else {
             // Open connection to contact node
+            DatagramSocket socket;
             try {
-                Socket socket = new Socket(this.existingNodeAddress, this.existingNodePort);
+                socket = new DatagramSocket(Config.MY_PORT);
 
                 // Open reader/writer to chord node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
                 BigInteger bigQuery = BigInteger.valueOf(2L);
                 BigInteger bigSelfId = BigInteger.valueOf(this.id);
 
@@ -129,11 +134,33 @@ public class Node {
                     bigResult = bigResult.add(bigSelfId);
 
                     // Send query to chord
-                    socketWriter.println(Chord.FIND_NODE + ":" + bigResult.longValue());
+                    String message = Chord.FIND_NODE + ":" + bigResult.longValue();
+                    byte[] toSend  = message.getBytes(); 
+                    InetAddress IPAddress; 
+                    try {
+                        IPAddress = InetAddress.getByName(this.existingNodeAddress);
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.existingNodePort); 
+                        System.out.println("sending message:"+message+"\nfrom-"+Config.MY_IP+":"+Config.MY_PORT+",to-"+this.existingNodeAddress+":"+this.existingNodePort);
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    } catch (UnknownHostException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                     System.out.println("Sent: " + Chord.FIND_NODE + ":" + bigResult.longValue());
 
+                    byte[] receive = new byte[65535]; 
+                    DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                    try {
+                        socket.receive(DpReceive);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    
                     // Read response from chord
-                    String serverResponse = socketReader.readLine();
+                    String serverResponse = data(receive).toString();
 
                     // Parse out address and port
                     String[] serverResponseFragments = serverResponse.split(":", 2);
@@ -144,10 +171,6 @@ public class Node {
 
                     System.out.println("Received: " + serverResponse);
                 }
-
-                // Close connections
-                socketWriter.close();
-                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 this.logError("Could not open connection to existing node");
@@ -167,18 +190,29 @@ public class Node {
 
         // Notify the first successor that we are the new predecessor, provided we do not open a connection to ourselves
         if (!this.address.equals(this.firstSuccessor.getAddress()) || (this.port != this.firstSuccessor.getPort())) {
+            DatagramSocket socket;
             try {
-                Socket socket = new Socket(this.firstSuccessor.getAddress(), this.firstSuccessor.getPort());
-
-                // Open writer to successor node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+                socket = new DatagramSocket(Config.MY_PORT);
 
                 // Tell successor that this node is its new predecessor
-                socketWriter.println(Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort());
+                String message = Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort();
+                byte[] toSend  = message.getBytes(); 
+                InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(this.firstSuccessor.getAddress());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.firstSuccessor.getPort()); 
+                    System.out.println("sending message:"+message+"\nfrom-"+Config.MY_IP+":"+Config.MY_PORT+",to-"+this.firstSuccessor.getAddress()+":"+this.firstSuccessor.getPort());
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 System.out.println("Sent: " + Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort() + " to " + this.firstSuccessor.getAddress() + ":" + this.firstSuccessor.getPort());
 
                 // Close connections
-                socketWriter.close();
                 socket.close();
             } catch (IOException e) {
                 this.logError("Could not open connection to first successor");
