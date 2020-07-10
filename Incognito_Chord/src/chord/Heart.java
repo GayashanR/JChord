@@ -5,11 +5,18 @@
  */
 package chord;
 
+import static chord.Sender.data;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -48,18 +55,39 @@ public class Heart implements Runnable {
         if (!this.chordNode.getAddress().equals(this.chordNode.getFirstSuccessor().getAddress()) || (this.chordNode.getPort() != this.chordNode.getFirstSuccessor().getPort())) {
             try {
                 // Open socket to successor
-                Socket socket = new Socket(this.chordNode.getFirstSuccessor().getAddress(), this.chordNode.getFirstSuccessor().getPort());
+//                Socket socket = new Socket(this.chordNode.getFirstSuccessor().getAddress(), this.chordNode.getFirstSuccessor().getPort());
 
-                // Open reader/writer to chord node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                // Send a ping
-                socketWriter.println(Chord.PING_QUERY + ":" + this.chordNode.getId());
+                DatagramSocket socket = new DatagramSocket();//(Config.MY_PORT + 1);
+                // Send query to chord
+                String message = Chord.PING_QUERY + ":" + this.chordNode.getId();
+                        
+                byte[] toSend  = message.getBytes();
+                InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(this.chordNode.getFirstSuccessor().getAddress());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.chordNode.getFirstSuccessor().getPort());
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Heart.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
                 System.out.println("Sent: " + Chord.PING_QUERY + ":" + this.chordNode.getId());
 
-                // Read response
-                String serverResponse = socketReader.readLine();
+                byte[] receive = new byte[65535]; 
+                DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                try {
+                    socket.receive(DpReceive);
+                } catch (IOException ex) {
+                    Logger.getLogger(Heart.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+                // Read response from chord
+                String serverResponse = data(receive).toString();
+                
                 System.out.println("Received: " + serverResponse);
 
                 // If we do not receive the proper response then something has gone wrong and we need to set our new immediate successor to the backup
@@ -71,8 +99,8 @@ public class Heart implements Runnable {
                 }
 
                 // Close connections
-                socketWriter.close();
-                socketReader.close();
+//                socketWriter.close();
+//                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 this.chordNode.acquire();
@@ -88,18 +116,39 @@ public class Heart implements Runnable {
         if (!this.chordNode.getAddress().equals(this.chordNode.getFirstPredecessor().getAddress()) || (this.chordNode.getPort() != this.chordNode.getFirstPredecessor().getPort())) {
             try {
                 // Open socket to predecessor
-                Socket socket = new Socket(this.chordNode.getFirstPredecessor().getAddress(), this.chordNode.getFirstPredecessor().getPort());
+//                Socket socket = new Socket(this.chordNode.getFirstPredecessor().getAddress(), this.chordNode.getFirstPredecessor().getPort());
 
-                // Open reader/writer to chord node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                // Send a ping
-                socketWriter.println(Chord.PING_QUERY + ":" + this.chordNode.getId());
+                DatagramSocket socket = new DatagramSocket();//(Config.MY_PORT + 1);
+                // Send query to chord
+                String message = Chord.PING_QUERY + ":" + this.chordNode.getId();
+                        
+                byte[] toSend  = message.getBytes();
+                InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(this.chordNode.getFirstPredecessor().getAddress());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.chordNode.getFirstPredecessor().getPort());
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Heart.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
                 System.out.println("Sent: " + Chord.PING_QUERY + ":" + this.chordNode.getId());
 
-                // Read response
-                String serverResponse = socketReader.readLine();
+                byte[] receive = new byte[65535]; 
+                DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                try {
+                    socket.receive(DpReceive);
+                } catch (IOException ex) {
+                    Logger.getLogger(Heart.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+                // Read response from chord
+                String serverResponse = data(receive).toString();
+                
                 System.out.println("Received: " + serverResponse);
 
                 // If we do not receive the proper response then something has gone wrong and we need to set our new immediate predecessor to the backup
@@ -110,8 +159,6 @@ public class Heart implements Runnable {
                 }
 
                 // Close connections
-                socketWriter.close();
-                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 this.chordNode.acquire();
