@@ -39,18 +39,17 @@ public class NodeStabilizer extends Thread {
             // Initially sleep
             Thread.sleep(this.delaySeconds * 1000);
 
-            DatagramSocket socket= new DatagramSocket();//(Config.MY_PORT - 1);
-//            PrintWriter socketWriter = null;
-//            BufferedReader socketReader = null;
-
+            DatagramSocket socket= new DatagramSocket();
+            
             while (true) {
                 // Only open a connection to the successor if it is not ourselves
                 if (!this.chordNode.getAddress().equals(this.chordNode.getFirstSuccessor().getAddress()) || (this.chordNode.getPort() != this.chordNode.getFirstSuccessor().getPort())) {
-                    // Open socket to successor
-//                    socket = new Socket(this.chordNode.getFirstSuccessor().getAddress(), this.chordNode.getFirstSuccessor().getPort());
+                    
+                    
 
                     // Submit a request for the predecessor
-                    String message = Chord.REQUEST_PREDECESSOR + ":" + this.chordNode.getId() + " asking " + this.chordNode.getFirstSuccessor().getId();
+                    String message = Chord.REQUEST_PREDECESSOR + " " + this.chordNode.getId() + " asking " + this.chordNode.getFirstSuccessor().getId();
+                    message = Message.customFormat("0000", message.length()) + " " + message;
                     byte[] toSend  = message.getBytes(); 
                     InetAddress IPAddress; 
                     try {
@@ -60,8 +59,8 @@ public class NodeStabilizer extends Thread {
                     } catch (UnknownHostException ex) {
                         Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
                     }
-//                    socketWriter.println(Chord.REQUEST_PREDECESSOR + ":" + this.chordNode.getId() + " asking " + this.chordNode.getFirstSuccessor().getId());
-                    System.out.println("Sent: " + Chord.REQUEST_PREDECESSOR + ":" + this.chordNode.getId() + " asking " + this.chordNode.getFirstSuccessor().getId());
+                    
+                    System.out.println("Sent: " + message);
 
                     byte[] receive = new byte[65535]; 
                     DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
@@ -77,7 +76,7 @@ public class NodeStabilizer extends Thread {
                     System.out.println("Received: " + serverResponse);
 
                     // Parse server response for address and port
-                    String[] predecessorFragments = serverResponse.split(":");
+                    String[] predecessorFragments = serverResponse.split(" ");
                     String predecessorAddress = predecessorFragments[0];
                     int predecessorPort = Integer.valueOf(predecessorFragments[1]);
 
@@ -97,16 +96,13 @@ public class NodeStabilizer extends Thread {
 
                         this.chordNode.release();
 
-                        // Close connections
-//                        socketWriter.close();
-//                        socketReader.close();
-//                        socket.close();
-
-                        // Inform new successor that we are now their predecessor
-//                        socket = new Socket(newSuccessor.getAddress(), newSuccessor.getPort());
+                        
+                        
+                        
 
                         // Tell successor that this node is its new predecessor
-                        String message1 = Chord.NEW_PREDECESSOR + ":" + this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+                        String message1 = Chord.JOIN + " " + this.chordNode.getAddress() + " " + this.chordNode.getPort();
+                        message1 = Message.customFormat("0000", message1.length()) + " " + message1;
                         byte[] toSend1  = message1.getBytes(); 
                         InetAddress IPAddress1; 
                         try {
@@ -116,8 +112,8 @@ public class NodeStabilizer extends Thread {
                         } catch (UnknownHostException ex) {
                             Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(Chord.NEW_PREDECESSOR + ":" + this.chordNode.getAddress() + ":" + this.chordNode.getPort());
-                        System.out.println("Sent: " + Chord.NEW_PREDECESSOR + ":" + this.chordNode.getAddress() + ":" + this.chordNode.getPort());
+                        
+                        System.out.println("Sent: " + message1);
                     }
 
                     BigInteger bigQuery = BigInteger.valueOf(2L);
@@ -131,7 +127,8 @@ public class NodeStabilizer extends Thread {
                         bigResult = bigResult.add(bigSelfId);
 
                         // Send query to chord
-                        String message1 = Chord.FIND_NODE + ":" + bigResult.longValue();
+                        String message1 = Chord.FIND_NODE + " " + bigResult.longValue();
+                        message1 = Message.customFormat("0000", message1.length()) + " " + message1;
                         byte[] toSend1  = message1.getBytes(); 
                         InetAddress IPAddress1; 
                         try {
@@ -141,8 +138,8 @@ public class NodeStabilizer extends Thread {
                         } catch (UnknownHostException ex) {
                             Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(Chord.FIND_NODE + ":" + bigResult.longValue());
-                        System.out.println("Sent: " + Chord.FIND_NODE + ":" + bigResult.longValue());
+                        
+                        System.out.println("Sent: " + message1);
 
                         receive = new byte[65535]; 
                         DpReceive = new DatagramPacket(receive, receive.length); 
@@ -156,8 +153,8 @@ public class NodeStabilizer extends Thread {
                         serverResponse = data(receive).toString();
 
                         // Parse out address and port
-                        String[] serverResponseFragments = serverResponse.split(":", 2);
-                        String[] addressFragments = serverResponseFragments[1].split(":");
+                        String[] serverResponseFragments = serverResponse.split(" ", 3);
+                        String[] addressFragments = serverResponseFragments[2].split(" ");
 
                         // Add response finger to table
                         this.chordNode.getFingers().put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
@@ -169,15 +166,8 @@ public class NodeStabilizer extends Thread {
 
                     this.chordNode.release();
 
-                    // Close connections
-//                    socketWriter.close();
-//                    socketReader.close();
-//                    socket.close();
                 } else if (!this.chordNode.getAddress().equals(this.chordNode.getFirstPredecessor().getAddress()) || (this.chordNode.getPort() != this.chordNode.getFirstPredecessor().getPort())) {
-                    // Open socket to successor
-//                    socket = new Socket(this.chordNode.getFirstPredecessor().getAddress(), this.chordNode.getFirstPredecessor().getPort());
-
-
+                    
                     BigInteger bigQuery = BigInteger.valueOf(2L);
                     BigInteger bigSelfId = BigInteger.valueOf(this.chordNode.getId());
 
@@ -189,7 +179,8 @@ public class NodeStabilizer extends Thread {
                         bigResult = bigResult.add(bigSelfId);
 
                         // Send query to chord
-                        String message = Chord.FIND_NODE + ":" + bigResult.longValue();
+                        String message = Chord.FIND_NODE + " " + bigResult.longValue();
+                        message = Message.customFormat("0000", message.length()) + " " + message;
                         byte[] toSend  = message.getBytes(); 
                         InetAddress IPAddress; 
                         try {
@@ -199,8 +190,8 @@ public class NodeStabilizer extends Thread {
                         } catch (UnknownHostException ex) {
                             Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(Chord.FIND_NODE + ":" + bigResult.longValue());
-                        System.out.println("Sent: " + Chord.FIND_NODE + ":" + bigResult.longValue());
+                        
+                        System.out.println("Sent: " + message);
 
                         byte[] receive = new byte[65535]; 
                         DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
@@ -215,8 +206,8 @@ public class NodeStabilizer extends Thread {
 
 
                         // Parse out address and port
-                        String[] serverResponseFragments = serverResponse.split(":", 2);
-                        String[] addressFragments = serverResponseFragments[1].split(":");
+                        String[] serverResponseFragments = serverResponse.split(" ", 3);
+                        String[] addressFragments = serverResponseFragments[2].split(" ");
 
                         // Add response finger to table
                         this.chordNode.getFingers().put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
@@ -228,10 +219,6 @@ public class NodeStabilizer extends Thread {
 
                     this.chordNode.release();
 
-                    // Close connections
-//                    socketWriter.close();
-//                    socketReader.close();
-//                    socket.close();
                 }
 
                 // Stabilize again after delay

@@ -134,7 +134,8 @@ public class Node {
                     bigResult = bigResult.add(bigSelfId);
 
                     // Send query to chord
-                    String message = Chord.FIND_NODE + ":" + bigResult.longValue();
+                    String message = Chord.FIND_NODE + " " + bigResult.longValue();
+                    message = Message.customFormat("0000", message.length()) + " " + message;
                     byte[] toSend  = message.getBytes(); 
                     InetAddress IPAddress; 
                     try {
@@ -149,7 +150,7 @@ public class Node {
                     } catch (UnknownHostException ex) {
                         Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
                     }
-                    System.out.println("Sent: " + Chord.FIND_NODE + ":" + bigResult.longValue());
+                    System.out.println("Sent: " + message);
 
                     byte[] receive = new byte[65535]; 
                     DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
@@ -163,8 +164,8 @@ public class Node {
                     String serverResponse = data(receive).toString();
 
                     // Parse out address and port
-                    String[] serverResponseFragments = serverResponse.split(":", 2);
-                    String[] addressFragments = serverResponseFragments[1].split(":");
+                    String[] serverResponseFragments = serverResponse.split(" ", 3);
+                    String[] addressFragments = serverResponseFragments[2].split(" ");
 
                     // Add response finger to table
                     this.fingers.put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
@@ -195,7 +196,8 @@ public class Node {
                 socket = new DatagramSocket(Config.MY_PORT);
 
                 // Tell successor that this node is its new predecessor
-                String message = Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort();
+                String message = Chord.JOIN + " " + this.getAddress() + " " + this.getPort();
+                message = Message.customFormat("0000", message.length()) + " " + message;
                 byte[] toSend  = message.getBytes(); 
                 InetAddress IPAddress; 
                 try {
@@ -210,7 +212,7 @@ public class Node {
                 } catch (UnknownHostException ex) {
                     Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                System.out.println("Sent: " + Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort() + " to " + this.firstSuccessor.getAddress() + ":" + this.firstSuccessor.getPort());
+                System.out.println("Sent: " + message);
 
                 // Close connections
                 socket.close();

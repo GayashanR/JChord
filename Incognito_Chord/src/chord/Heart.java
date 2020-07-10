@@ -54,12 +54,11 @@ public class Heart implements Runnable {
         // Only send heartbeats if we are not the destination
         if (!this.chordNode.getAddress().equals(this.chordNode.getFirstSuccessor().getAddress()) || (this.chordNode.getPort() != this.chordNode.getFirstSuccessor().getPort())) {
             try {
-                // Open socket to successor
-//                Socket socket = new Socket(this.chordNode.getFirstSuccessor().getAddress(), this.chordNode.getFirstSuccessor().getPort());
-
-                DatagramSocket socket = new DatagramSocket();//(Config.MY_PORT + 1);
+                
+                DatagramSocket socket = new DatagramSocket();
                 // Send query to chord
-                String message = Chord.PING_QUERY + ":" + this.chordNode.getId();
+                String message = Chord.PING_QUERY + " " + this.chordNode.getId();
+                message = Message.customFormat("0000", message.length()) + " " + message;
                         
                 byte[] toSend  = message.getBytes();
                 InetAddress IPAddress; 
@@ -75,7 +74,7 @@ public class Heart implements Runnable {
                     Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 
-                System.out.println("Sent: " + Chord.PING_QUERY + ":" + this.chordNode.getId());
+                System.out.println("Sent: " + message);
 
                 byte[] receive = new byte[65535]; 
                 DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
@@ -99,8 +98,6 @@ public class Heart implements Runnable {
                 }
 
                 // Close connections
-//                socketWriter.close();
-//                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 this.chordNode.acquire();
@@ -115,12 +112,11 @@ public class Heart implements Runnable {
         // Only send heartbeats if we are not the destination
         if (!this.chordNode.getAddress().equals(this.chordNode.getFirstPredecessor().getAddress()) || (this.chordNode.getPort() != this.chordNode.getFirstPredecessor().getPort())) {
             try {
-                // Open socket to predecessor
-//                Socket socket = new Socket(this.chordNode.getFirstPredecessor().getAddress(), this.chordNode.getFirstPredecessor().getPort());
-
-                DatagramSocket socket = new DatagramSocket();//(Config.MY_PORT + 1);
+                
+                DatagramSocket socket = new DatagramSocket();
                 // Send query to chord
-                String message = Chord.PING_QUERY + ":" + this.chordNode.getId();
+                String message = Chord.PING_QUERY + " " + this.chordNode.getId();
+                message = Message.customFormat("0000", message.length()) + " " + message;
                         
                 byte[] toSend  = message.getBytes();
                 InetAddress IPAddress; 
@@ -136,7 +132,7 @@ public class Heart implements Runnable {
                     Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 
-                System.out.println("Sent: " + Chord.PING_QUERY + ":" + this.chordNode.getId());
+                System.out.println("Sent: " + message);
 
                 byte[] receive = new byte[65535]; 
                 DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
