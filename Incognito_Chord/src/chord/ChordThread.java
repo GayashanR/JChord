@@ -50,9 +50,9 @@ public class ChordThread implements Runnable {
             String query;
             if((query = data(receive).toString().trim()) != null) {
                 // Split the query on the : token in order to get the command and the content portions
-                String[] queryContents = query.split(":", 2);
-                String command = queryContents[0];
-                String content = queryContents[1];
+                String[] queryContents = query.split(" ", 3);
+                String command = queryContents[1];
+                String content = queryContents[2];
                 
                 System.out.println("Received: " + command + " " + content);
                 
@@ -71,7 +71,7 @@ public class ChordThread implements Runnable {
                         } catch (IOException ex) {
                             Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(response);
+                        
                         
                         break;
                     }
@@ -89,7 +89,7 @@ public class ChordThread implements Runnable {
                         } catch (IOException ex) {
                             Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(response);
+                        
                         
                         break;
                     }
@@ -107,13 +107,12 @@ public class ChordThread implements Runnable {
                         } catch (IOException ex) {
                             Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(response);
                         
                         break;
                     }
-                    case Chord.NEW_PREDECESSOR: {
+                    case Chord.JOIN: {
                         // Parse address and port from message
-                        String[] contentFragments = content.split(":");
+                        String[] contentFragments = content.split(" ");
                         String address = contentFragments[0];
                         int port = Integer.valueOf(contentFragments[1]);
                         
@@ -133,7 +132,7 @@ public class ChordThread implements Runnable {
                     }
                     case Chord.REQUEST_PREDECESSOR: {
                         // Return the first predecessor address:port
-                        String response = this.chordNode.getFirstPredecessor().getAddress() + ":" + this.chordNode.getFirstPredecessor().getPort();
+                        String response = this.chordNode.getFirstPredecessor().getAddress() + " " + this.chordNode.getFirstPredecessor().getPort();
                         System.out.println("Sent: " + response);
                         
                         // Send response back to client
@@ -146,7 +145,7 @@ public class ChordThread implements Runnable {
                         } catch (IOException ex) {
                             Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(response);
+                        
                         
                         break;
                     }
@@ -165,7 +164,6 @@ public class ChordThread implements Runnable {
                         } catch (IOException ex) {
                             Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
                         }
-//                        socketWriter.println(response);
                         
                         break;
                     }
@@ -174,7 +172,6 @@ public class ChordThread implements Runnable {
             
             // Close connections
         }
-//        System.out.println("Client connection terminated on port " + this.socket.getLocalPort());
     }
 
     private String findValue(String query) {
@@ -191,9 +188,11 @@ public class ChordThread implements Runnable {
 
         // If the query is greater than our predecessor id and less than equal to our id then we have the value
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = "VALUE_FOUND:Request acknowledged on node " + this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+            response = "VALUE_FOUND Request_acknowledged_on_node" + this.chordNode.getAddress() + " " + this.chordNode.getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else if (this.doesQueryIdBelongToNextNode(queryId)) {
-            response = "VALUE_FOUND:Request acknowledged on node " + this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
+            response = "VALUE_FOUND Request_acknowledged_on_node" + this.chordNode.getFirstSuccessor().getAddress() + " " + this.chordNode.getFirstSuccessor().getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
@@ -222,11 +221,11 @@ public class ChordThread implements Runnable {
 
             try {
                 // Open socket to chord node
-//                Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
-                DatagramSocket socket = new DatagramSocket();//(Config.MY_PORT + 1);
+                DatagramSocket socket = new DatagramSocket();
 
                 // Send query to chord
-                String message = Chord.FIND_VALUE + ":" + query;
+                String message = Chord.FIND_VALUE + " " + query;
+                message = Message.customFormat("0000", message.length()) + " " + message;
                         
                 byte[] toSend  = message.getBytes();
                 InetAddress IPAddress; 
@@ -241,8 +240,8 @@ public class ChordThread implements Runnable {
                     } catch (UnknownHostException ex) {
                         Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
                     }
-//                socketWriter.println(Chord.FIND_VALUE + ":" + query);
-                System.out.println("Sent: " + Chord.FIND_VALUE + ":" + query);
+                    
+                System.out.println("Sent: " + message);
 
                 byte[] receive = new byte[65535]; 
                 DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
@@ -260,8 +259,6 @@ public class ChordThread implements Runnable {
                 response = serverResponse;
 
                 // Close connections
-//                socketWriter.close();
-//                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -285,9 +282,11 @@ public class ChordThread implements Runnable {
 
         // If the query is greater than our predecessor id and less than equal to our id then we have the value
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = Chord.NODE_FOUND + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+            response = Chord.NODE_FOUND + " " +  this.chordNode.getAddress() + " " + this.chordNode.getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else if(this.doesQueryIdBelongToNextNode(queryId)) {
-            response = Chord.NODE_FOUND + ":" +  this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
+            response = Chord.NODE_FOUND + " " +  this.chordNode.getFirstSuccessor().getAddress() + " " + this.chordNode.getFirstSuccessor().getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
@@ -316,11 +315,11 @@ public class ChordThread implements Runnable {
 
             try {
                 // Open socket to chord node
-//                Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
-                DatagramSocket socket = new DatagramSocket();//(Config.MY_PORT + 1);
+
+                DatagramSocket socket = new DatagramSocket();
                 // Send query to chord
-                String message = Chord.FIND_NODE + ":" + queryId;
-                        
+                String message = Chord.FIND_NODE + " " + queryId;
+                message = Message.customFormat("0000", message.length()) + " " + message;
                 byte[] toSend  = message.getBytes();
                 InetAddress IPAddress; 
                 try {
@@ -334,8 +333,8 @@ public class ChordThread implements Runnable {
                 } catch (UnknownHostException ex) {
                     Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
                 }
-//                socketWriter.println(Chord.FIND_NODE + ":" + queryId);
-                System.out.println("Sent: " + Chord.FIND_NODE + ":" + queryId);
+                
+                System.out.println("Sent: " + message);
 
                 byte[] receive = new byte[65535]; 
                 DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
@@ -354,8 +353,6 @@ public class ChordThread implements Runnable {
                 response = serverResponse;
 
                 // Close connections
-//                socketWriter.close();
-//                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();

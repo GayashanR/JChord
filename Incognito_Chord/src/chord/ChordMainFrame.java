@@ -189,6 +189,11 @@ public class ChordMainFrame extends javax.swing.JFrame {
 
         btnLeave.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         btnLeave.setText("Leave the Network");
+        btnLeave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLeaveActionPerformed(evt);
+            }
+        });
 
         jLabel11.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel11.setText("File Name");
@@ -472,6 +477,10 @@ public class ChordMainFrame extends javax.swing.JFrame {
             Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_btnSearchActionPerformed
+
+    private void btnLeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveActionPerformed
+        
+    }//GEN-LAST:event_btnLeaveActionPerformed
 
     //generate SHA/MD5 file checksum
     private static String getFileChecksum(MessageDigest digest, File file) throws IOException
