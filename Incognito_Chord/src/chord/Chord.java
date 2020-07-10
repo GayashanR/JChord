@@ -19,4 +19,5 @@ public class Chord {
     public final static String  PING_QUERY          = "IS THERE ANYONE OUT THERE?";
     public final static String  PING_RESPONSE       = "REUNITED";
     public final static long    RING_SIZE           = 4294967296L;
+    public static final String STORE_LOCATION_FOUND = "STORE_LOCATION_FOUND";
 }

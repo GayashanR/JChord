@@ -101,7 +101,7 @@ public class Node {
         new Thread(new NodeStabilizer(this)).start();
         new Thread(new Heart(this)).start();
     }
-
+            
     /**
      * Initializes finger table. If an existing node has been defined it will use that node to perform lookups. Otherwise, this node is the only node in the ring and all fingers will refer to self.
      */
@@ -184,6 +184,24 @@ public class Node {
                 this.logError("Could not open connection to first successor");
                 e.printStackTrace();
             }
+        }
+    }
+
+    /***
+     *
+     * Initialize file hashing and store in nodes
+     *
+     */
+    private void storeFilesNodes() {
+
+        try {
+            Socket socket = new Socket(this.existingNodeAddress, this.existingNodePort);
+            // Open reader/writer to chord node
+            PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            socketWriter.println(Chord.STORE + ":" + this.getAddress() + ":" + this.getPort());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

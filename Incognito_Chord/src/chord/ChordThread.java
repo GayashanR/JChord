@@ -212,9 +212,9 @@ public class ChordThread implements Runnable {
         String response = "Store Location Not found.";
 
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = Chord.STORE + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+            response = Chord.STORE_LOCATION_FOUND + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
         } else if(this.doesQueryIdBelongToNextNode(queryId)) {
-            response = Chord.STORE + ":" +  this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
+            response = Chord.STORE_LOCATION_FOUND + ":" +  this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
         } else { // traverse finger tables
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
@@ -231,7 +231,7 @@ public class ChordThread implements Runnable {
                     closestPredecessor = finger;
                 }
             }
-            System.out.println("STORE LOCATION - queryid: " + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
+            System.out.println(Chord.STORE_LOCATION_FOUND + ":" + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
 
             try {
                 Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
@@ -244,7 +244,7 @@ public class ChordThread implements Runnable {
 
                 // Read response from chord
                 String serverResponse = socketReader.readLine();
-                System.out.println("Response from node " + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
+                System.out.println(Chord.STORE_LOCATION_FOUND + ":" + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
 
                 response = serverResponse;
 
