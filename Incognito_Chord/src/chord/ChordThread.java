@@ -42,6 +42,8 @@ public class ChordThread implements Runnable {
                 String[] queryContents = query.split(":", 2);
                 String command = queryContents[0];
                 String content = queryContents[1];
+                System.out.println("COMMAND : "+command);
+                System.out.println("CONTENT : "+content);
 
                 System.out.println("Received: " + command + " " + content);
 
@@ -144,7 +146,6 @@ public class ChordThread implements Runnable {
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
-
             this.chordNode.acquire();
 
             // Look for a node identifier in the finger table that is less than the key id and closest in the ID space to the key id
@@ -208,7 +209,7 @@ public class ChordThread implements Runnable {
             queryId -= Chord.RING_SIZE;
         }
 
-        String response = "Not found.";
+        String response = "Store Location Not found.";
 
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
             response = Chord.STORE + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
@@ -217,25 +218,20 @@ public class ChordThread implements Runnable {
         } else { // traverse finger tables
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
-
             this.chordNode.acquire();
-
             for (Finger finger : this.chordNode.getFingers().values()) {
                 long distance;
-
                 if (queryId >= finger.getId()) {
                     distance = queryId - finger.getId();
                 } else {
                     distance = queryId + Chord.RING_SIZE - finger.getId();
                 }
-
                 if (distance < minimumDistance) {
                     minimumDistance = distance;
                     closestPredecessor = finger;
                 }
             }
-
-            System.out.println("queryid: " + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
+            System.out.println("STORE LOCATION - queryid: " + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
 
             try {
                 Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
@@ -243,8 +239,8 @@ public class ChordThread implements Runnable {
                 BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 // Send query to chord
-                socketWriter.println(Chord.FIND_NODE + ":" + queryId);
-                System.out.println("Sent: " + Chord.FIND_NODE + ":" + queryId);
+                socketWriter.println(Chord.STORE + ":" + queryId);
+                System.out.println("Sent: " + Chord.STORE + ":" + queryId);
 
                 // Read response from chord
                 String serverResponse = socketReader.readLine();

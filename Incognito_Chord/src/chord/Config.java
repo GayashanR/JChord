@@ -26,7 +26,7 @@ public class Config {
     static int noOfNodes = 1;
     static int myNodeNumber = 0;
     
-    static  int BOOTSTRAP_PORT =  9876;
+    static  int BOOTSTRAP_PORT =  5555;
     static ArrayList<String> availableFiles = new ArrayList<>(); 
    
     static int TTL = 10;
