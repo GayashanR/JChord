@@ -31,10 +31,10 @@ public class IndexServer {
         String s;
     //    List<Neighbour> nodes = new ArrayList<Neighbour>();
         HashMap<String,Integer> map=new HashMap<String,Integer>();//Creating HashMap
-       // map.put("Lord of the rings", 2);
-       // map.put("Lord of the Jungle", 3);
-       // map.put("Lord ", 1);
-       // map.put("Nelson ", 2);
+//        map.put("Lord of the rings", 2);
+//        map.put("Lord of the Jungle", 3);
+//        map.put("Lord ", 1);
+//        map.put("Nelson ", 2);
         
         int peerCount =1;
         String result ="";
@@ -77,7 +77,7 @@ public class IndexServer {
                         
                     }
                      
-               result="results:"+resultset.size()+":";
+               result="SEARCH_RES search_result:"+resultset.size()+":";
                result+=String.join(":", resultset);
                     
               }
