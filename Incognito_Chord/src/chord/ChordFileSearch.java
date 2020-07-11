@@ -11,6 +11,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +29,7 @@ public class ChordFileSearch {
         this.node = node;
     } 
     
-    public Finger searchFile(String fullFileName){
+    public List<Finger> searchFile(String fullFileName){
         long fileKey = new SHA1Hasher(fullFileName).getLong();
         if (fileKey >= Chord.RING_SIZE) {
             fileKey -= Chord.RING_SIZE;
@@ -85,18 +87,20 @@ public class ChordFileSearch {
         return response;
     }
     
-    private Finger decodeServerResponse(String serverResponse){
+    private List<Finger> decodeServerResponse(String serverResponse){
          String[] queryContents = serverResponse.split(" ");
          String command = queryContents[1];
+         
+         List<Finger> fingetList = new ArrayList<>();
+         
          if(command.equals(Chord.VALUE_FOUND)){
              int noOfNodes = Integer.valueOf(queryContents[2]);
              
-             Random r = new Random();
-             int randomIndex = r.ints(0, noOfNodes).findFirst().getAsInt();
-             
-             Finger fileOwner = new Finger(queryContents[3+(2*randomIndex)], Integer.valueOf(queryContents[4+(2*randomIndex)]));
-             return fileOwner;
+             for(int i=0; i<noOfNodes; i++){
+                  Finger fileOwner = new Finger(queryContents[3+(2*i)], Integer.valueOf(queryContents[4+(2*i)]));
+                  fingetList.add(fileOwner);
+             }
          }
-         return null;
+         return fingetList;
     }
 }
