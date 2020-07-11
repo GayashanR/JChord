@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
@@ -36,7 +37,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
     String resMsg;
     Node node;
     long[] keyList;
-    private Map<String, Finger> keys = new HashMap<>();
+    private Map<String, List<Finger>> keys = new HashMap<>();
     public ChordMainFrame() {
         initComponents();
         lblJoinStatus.setText("");
@@ -445,7 +446,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         RegisterResponse regRes = register();
         if(!regRes.isInitialNode())
         {
-            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps()[0], regRes.getpeerPorts()[0]+"");
+            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps(), regRes.getpeerPorts());
         }
         else
         {
@@ -456,7 +457,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
         
         for(int i = 0; i < keyList.length; i++)
         {
-            keys.put(keyList[i]+"", new Finger(txtIP.getText(), Integer.valueOf(txtPort.getText())));
+            List<Finger> lst = new ArrayList<>();
+            lst.add(new Finger(txtIP.getText(), Integer.valueOf(txtPort.getText())));
+            keys.put(keyList[i]+"", lst);
         }
         node.setKeys(keys);
         
@@ -629,10 +632,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
                 //  break;
 
                 default:
-                    int number = Integer.parseInt(noOfNodes.trim());
-                    peerIps = new String[number];
-                    peerPorts = new int[number];
-                    System.out.println("number:" + number);
+                    peerIps = new String[2];
+                    peerPorts = new int[2];
+                    
                     peerIps[0] = splitted[3];
                     peerPorts[0] = Integer.parseInt(splitted[4]);
                     

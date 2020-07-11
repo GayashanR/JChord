@@ -15,9 +15,11 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import java.util.ArrayList;
+import java.util.List;
 /**
  *
  * @author GayashanRathnavibush
@@ -95,9 +97,16 @@ public class ChordThread implements Runnable {
                     }
                     case Chord.STORE: {
                         this.chordNode.acquire();
-                        
-                        // Move fist predecessor to second
-                        this.chordNode.addKey(content.split(" ")[0], new Finger(content.split(" ")[1], Integer.valueOf(content.split(" ")[2])));
+                        List<Finger> list = chordNode.getKey(content.split(" ")[0]);
+                        if(list == null)
+                        {
+                            list = new ArrayList<>();
+                        }
+                        for(int i = 0; i < Integer.valueOf(content.split(" ")[1]); i++)
+                        {
+                            list.add(new Finger(content.split(" ")[2*i+2], Integer.valueOf(content.split(" ")[2*i+3])));
+                        }
+                        this.chordNode.addKeys(content.split(" ")[0], list);
                         
                         // Release lock
                         this.chordNode.release();
@@ -198,24 +207,19 @@ public class ChordThread implements Runnable {
     }
 
     private String findValue(String query) {
-        // Get long of query
-        SHA1Hasher queryHasher = new SHA1Hasher(query);
-        long queryId = queryHasher.getLong();
-
-        // Wrap the queryid if it is as big as the ring
-        if (queryId >= Chord.RING_SIZE) {
-            queryId -= Chord.RING_SIZE;
-        }
+        
+        long queryId = Long.valueOf(query);
 
         String response = "Not found.";
 
         // If the query is greater than our predecessor id and less than equal to our id then we have the value
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = "VALUE_FOUND Request_acknowledged_on_node" + this.chordNode.getAddress() + " " + this.chordNode.getPort();
-            response = Message.customFormat("0000", response.length()) + " " + response;
-        } else if (this.doesQueryIdBelongToNextNode(queryId)) {
-            response = "VALUE_FOUND Request_acknowledged_on_node" + this.chordNode.getFirstSuccessor().getAddress() + " " + this.chordNode.getFirstSuccessor().getPort();
-            response = Message.customFormat("0000", response.length()) + " " + response;
+            System.out.println("Arrived On Node Responsible for File Key : "+query);
+            response = findKeyFromCurrentNode(query, this.chordNode);
+            
+        } else if (this.doesQueryIdBelongToNextNode(queryId)) { 
+            response = findKeyUsingFinger(this.chordNode.getFirstSuccessor(), query);
+            
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
@@ -242,50 +246,7 @@ public class ChordThread implements Runnable {
 
             System.out.println("queryid: " + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
 
-            try {
-                // Open socket to chord node
-                DatagramSocket socket = new DatagramSocket();
-
-                // Send query to chord
-                String message = Chord.FIND_VALUE + " " + query;
-                message = Message.customFormat("0000", message.length()) + " " + message;
-                        
-                byte[] toSend  = message.getBytes();
-                InetAddress IPAddress; 
-                    try {
-                        IPAddress = InetAddress.getByName(closestPredecessor.getAddress());
-                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, closestPredecessor.getPort());
-                        try {
-                            socket.send(packet);
-                        } catch (IOException ex) {
-                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                    } catch (UnknownHostException ex) {
-                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                    
-                System.out.println("Sent: " + message);
-
-                byte[] receive = new byte[65535]; 
-                DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
-                try {
-                    socket.receive(DpReceive);
-                } catch (IOException ex) {
-                    Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
-                }
-
-                // Read response from chord
-                String serverResponse = data(receive).toString();
-                        
-                System.out.println("Response from node " + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
-
-                response = serverResponse;
-
-                // Close connections
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            response = findKeyUsingFinger(closestPredecessor, query);
 
             this.chordNode.release();
         }
@@ -420,6 +381,72 @@ public class ChordThread implements Runnable {
             }
         }
 
+        return response;
+    }
+    
+    private String findKeyFromCurrentNode(String queryId, Node currentNode){
+        String response = "Not found.";
+        Map<String, Finger> nodeKeys = currentNode.getKeys();
+            
+        Finger fileDetailsFinger = nodeKeys.get(String.valueOf(queryId));
+        if(fileDetailsFinger!=null){
+            System.out.println("File with Key : "+queryId +" found. File Owner : "+fileDetailsFinger.getAddress()+":"+fileDetailsFinger.getPort());
+            response = Chord.VALUE_FOUND + " Request_acknowledged_on_node " + fileDetailsFinger.getAddress() + " " + fileDetailsFinger.getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
+        }else{
+            System.out.println("File with Key : "+queryId +" Not found.");
+            response = "VALUE_NOT_FOUND Request_acknowledged_on_node";
+            response = Message.customFormat("0000", response.length()) + " " + response;
+        }
+        return response;
+    }
+    
+    private String findKeyUsingFinger(Finger searchFinger, String key){
+        String response = "Not found.";
+        try {
+            // Open socket to chord node
+            DatagramSocket socket = new DatagramSocket();
+
+            // Send query to chord
+            String message = Chord.FIND_VALUE + " " + key;
+            message = Message.customFormat("0000", message.length()) + " " + message;
+
+            byte[] toSend  = message.getBytes();
+            InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(searchFinger.getAddress());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, searchFinger.getPort());
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+            System.out.println("Sent: " + message);
+
+            byte[] receive = new byte[65535]; 
+            DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+            try {
+                socket.receive(DpReceive);
+            } catch (IOException ex) {
+                Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            // Read response from chord
+            String serverResponse = data(receive).toString();
+
+            System.out.println("Response from node " + searchFinger.getAddress() + ", port " + searchFinger.getPort() + ", position " + " (" + searchFinger.getId() + "):");
+
+            response = serverResponse;
+
+            // Close connections
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return response;
     }
 }
