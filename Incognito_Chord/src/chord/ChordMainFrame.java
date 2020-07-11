@@ -619,7 +619,8 @@ public class ChordMainFrame extends javax.swing.JFrame {
 
     
     private void btnLeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveActionPerformed
-        
+        unreg();
+        System.exit(JFrame.EXIT_ON_CLOSE);
     }//GEN-LAST:event_btnLeaveActionPerformed
 
     private void menuItemFileKeysActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemFileKeysActionPerformed
