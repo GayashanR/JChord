@@ -18,7 +18,8 @@ import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import java.util.ArrayList;
+import java.util.List;
 /**
  *
  * @author GayashanRathnavibush
@@ -96,9 +97,16 @@ public class ChordThread implements Runnable {
                     }
                     case Chord.STORE: {
                         this.chordNode.acquire();
-                        
-                        // Move fist predecessor to second
-                        this.chordNode.addKey(content.split(" ")[0], new Finger(content.split(" ")[1], Integer.valueOf(content.split(" ")[2])));
+                        List<Finger> list = chordNode.getKey(content.split(" ")[0]);
+                        if(list == null)
+                        {
+                            list = new ArrayList<>();
+                        }
+                        for(int i = 0; i < Integer.valueOf(content.split(" ")[1]); i++)
+                        {
+                            list.add(new Finger(content.split(" ")[2*i+2], Integer.valueOf(content.split(" ")[2*i+3])));
+                        }
+                        this.chordNode.addKeys(content.split(" ")[0], list);
                         
                         // Release lock
                         this.chordNode.release();

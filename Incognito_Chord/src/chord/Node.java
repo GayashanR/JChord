@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
@@ -36,7 +37,7 @@ public class Node {
     private Finger firstSuccessor;
     private Finger secondSuccessor;
     private Map<Integer, Finger> fingers = new HashMap<>();
-    private Map<String, Finger> keys = new HashMap<>();
+    private Map<String, List<Finger>> keys = new HashMap<>();
     private long id;
     private String hex;
     private Semaphore semaphore = new Semaphore(1);
@@ -282,20 +283,29 @@ public class Node {
         return this.fingers;
     }
     
-    public Map<String, Finger> getKeys() {
+    public Map<String, List<Finger>> getKeys() {
         return this.keys;
     }
     
-    public void setKeys(Map<String, Finger> keys) {
+    public void setKeys(Map<String, List<Finger>> keys) {
         this.keys = keys;
     }
 
     public void addKey(String id, Finger node) {
-        this.keys.put(id, node);
+        keys.get(id).add(node);
+        this.keys.put(id, keys.get(id));
     }
     
-    public Finger getKey(String id) {
-        return this.keys.get((String)id);
+    public void addKeys(String id, List<Finger> nodeList) {
+        this.keys.put(id, nodeList);
+    }
+    
+    public void removeKey(String id) {
+        keys.remove(id);
+    }
+    
+    public List<Finger> getKey(String id) {
+        return this.keys.get(id);
     }
     
     public int getPort() {
