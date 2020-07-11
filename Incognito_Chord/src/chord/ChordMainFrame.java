@@ -446,7 +446,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         RegisterResponse regRes = register();
         if(!regRes.isInitialNode())
         {
-            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps()[0], regRes.getpeerPorts()[0]+"");
+            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps(), regRes.getpeerPorts());
         }
         else
         {
@@ -632,10 +632,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
                 //  break;
 
                 default:
-                    int number = Integer.parseInt(noOfNodes.trim());
-                    peerIps = new String[number];
-                    peerPorts = new int[number];
-                    System.out.println("number:" + number);
+                    peerIps = new String[2];
+                    peerPorts = new int[2];
+                    
                     peerIps[0] = splitted[3];
                     peerPorts[0] = Integer.parseInt(splitted[4]);
                     
