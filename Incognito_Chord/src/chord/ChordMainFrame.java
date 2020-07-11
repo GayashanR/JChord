@@ -445,7 +445,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         RegisterResponse regRes = register();
         if(!regRes.isInitialNode())
         {
-            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps()[0], regRes.getpeerPorts()[0]+"");
+            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps(), regRes.getpeerPorts());
         }
         else
         {

@@ -95,16 +95,16 @@ public class Node {
         System.out.println("You are listening on port " + this.port);
         System.out.println("Your position is " + this.hex + " (" + this.id + ")");
 
-        for(int i=0; i<existingNodeIps.length; i++){
-            // Set contact node fields
-            this.existingNodeAddress = existingNodeIps[i];
-            this.existingNodePort = existingNodePorts[i];
-            System.out.println("Connected to existing node " + this.existingNodeAddress + ":" + this.existingNodePort);
+        int closestNodeIndex = getClosestNodeArrayIndex(this.id, existingNodeIps, existingNodePorts);
+        
+        // Set contact node fields
+        this.existingNodeAddress = existingNodeIps[closestNodeIndex];
+        this.existingNodePort = existingNodePorts[closestNodeIndex];
+        System.out.println("Connected to existing node " + this.existingNodeAddress + ":" + this.existingNodePort);
 
-            // Initialize finger table and successors
-            this.initializeFingers();
-            this.initializeSuccessors();
-        }
+        // Initialize finger table and successors
+        this.initializeFingers();
+        this.initializeSuccessors();
 
         // Start listening for connections and heartbeats from neighbors
         new Thread(new NodeListener(this)).start();
@@ -224,6 +224,37 @@ public class Node {
                 e.printStackTrace();
             }
         }
+    }
+    
+    private int getClosestNodeArrayIndex(long currentNodeId, String[] existingNodeIps, int[] existingNodePorts){
+        long minimumDistance = getDistanceToNode(currentNodeId, existingNodeIps[0], existingNodePorts[0]);
+        int minimumDistanceNodeIndex=0;
+        
+        for(int i=1; i<existingNodeIps.length; i++){
+            long distanceToNeighbour = getDistanceToNode(currentNodeId, existingNodeIps[i], existingNodePorts[i]);
+            if(minimumDistance>distanceToNeighbour){
+                minimumDistanceNodeIndex = i;
+            }
+        }
+        
+        return minimumDistanceNodeIndex;
+    }
+    
+    private long getDistanceToNode(long currentNodeId, String toNodeIp, int toNodePort){
+        SHA1Hasher sha1Hasher = new SHA1Hasher(toNodeIp + ":" + toNodePort);
+        long toNodeId = sha1Hasher.getLong();
+        
+        if(toNodeId>=currentNodeId){
+            return toNodeId-currentNodeId;
+        }
+        else{
+            return getUpperBoundForNodeIds()+toNodeId-currentNodeId;
+        }
+    }
+    
+    private long getUpperBoundForNodeIds(){
+        BigInteger bigResult = BigInteger.valueOf(2L).pow(32);
+        return bigResult.longValue();
     }
 
     /**
