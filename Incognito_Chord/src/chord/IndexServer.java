@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.RowFilter.Entry;
 
 /**
  *
@@ -25,16 +26,23 @@ public class IndexServer {
     public static void main(String[] args) {
         DatagramSocket sock = null;
        // String filesnames ="ADD:Lord of the rings:train dragon";
-        String filesnames ="REM:Lord of the rings";
+       // String filesnames ="REM:Lord of the rings";
+        String filesnames ="SER:Lord";
         String s;
-        List<Neighbour> nodes = new ArrayList<Neighbour>();
+    //    List<Neighbour> nodes = new ArrayList<Neighbour>();
         HashMap<String,Integer> map=new HashMap<String,Integer>();//Creating HashMap
-        map.put("Lord of the rings", 2);
+//        map.put("Lord of the rings", 2);
+//        map.put("Lord of the Jungle", 3);
+//        map.put("Lord ", 1);
+//        map.put("Nelson ", 2);
+        
         int peerCount =1;
         String result ="";
+        List<String> resultset= new ArrayList();
+         
         try {
-          //  sock = new DatagramSocket(555);
-            System.out.println("Index Server is created at 555. Waiting for incoming data...");
+            sock = new DatagramSocket(4444);
+            System.out.println("Index Server is created at 4444. Waiting for incoming data...");
             
              while (true) {   
               
@@ -61,13 +69,17 @@ public class IndexServer {
                   
                   
                 for(int i=0; i<items.size()-1;i++){
-                if(map.containsKey(items.get(i+1))){
-                
-               result="filename:"+items.get(i+1)+":"+"peercount:"+ map.get(items.get(i+1));  
-               
-                }  
-               
-             
+                   
+                     for (Map.Entry<String, Integer> e : map.entrySet()) {
+                        if (e.getKey().startsWith(items.get(i+1))) {
+                           resultset.add("filename:"+e.getKey()+":"+"peercount:"+ e.getValue());
+                        }
+                        
+                    }
+                     
+               result="SEARCH_RES search_result:"+resultset.size()+":";
+               result+=String.join(":", resultset);
+                    
               }
                
               }
@@ -97,7 +109,7 @@ public class IndexServer {
                }
             
              System.out.println(Arrays.asList(map));
-             // System.out.println(Arrays.asList(result));
+             System.out.println(Arrays.asList(result));
         }
             
             
