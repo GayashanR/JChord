@@ -5,6 +5,7 @@
  */
 package chord;
 
+import static chord.Sender.data;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,12 +45,14 @@ public class ChordMainFrame extends javax.swing.JFrame {
     Node node;
     ChordFileSearch chordFileSearch;
     long[] keyList;
+    List<String> fileList;
     private Map<String, List<Finger>> keys = new HashMap<>();
     public ChordMainFrame() {
         initComponents();
         lblJoinStatus.setText("");
         
         DefaultListModel listModel = new DefaultListModel();
+        fileList = new ArrayList<>();
 
         ArrayList<String> zNames = new ArrayList<>();
         try {
@@ -71,6 +74,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         for(int i = 0; i < size ; i++)
         {
             listModel.addElement(zNames.get(i));
+            fileList.add(zNames.get(i));
             keyList[i] = new SHA1Hasher(zNames.get(i)).getLong();
         }
         lstSharedFiles.setModel(listModel);
@@ -158,11 +162,13 @@ public class ChordMainFrame extends javax.swing.JFrame {
         jLabel6.setText("BS IP Address");
 
         txtBSIP.setText("127.0.0.1");
+        txtBSIP.setEnabled(false);
 
         jLabel7.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel7.setText("BS Port");
 
         txtBSPort.setText("55555");
+        txtBSPort.setEnabled(false);
         txtBSPort.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtBSPortActionPerformed(evt);
@@ -173,6 +179,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         jLabel8.setText("Index Server IP Address");
 
         txtISPort.setText("4444");
+        txtISPort.setEnabled(false);
         txtISPort.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtISPortActionPerformed(evt);
@@ -180,6 +187,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         });
 
         txtISIP.setText("127.0.0.1");
+        txtISIP.setEnabled(false);
 
         jLabel9.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel9.setText("Index Server Port");
@@ -218,7 +226,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         });
 
         btnSearch.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
-        btnSearch.setText("Search the Network");
+        btnSearch.setText("Search");
         btnSearch.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnSearchActionPerformed(evt);
@@ -507,19 +515,23 @@ public class ChordMainFrame extends javax.swing.JFrame {
         
         //Message String creation
         String message = "ADD:";
+        
+        message = message + String.join(":", fileList);
 
         for(int i = 0; i < keyList.length; i++)
         {
             List<Finger> lst = new ArrayList<>();
             lst.add(new Finger(txtIP.getText(), Integer.valueOf(txtPort.getText())));
             keys.put(keyList[i]+"", lst);
-            message.concat(keyList[i]+":");
+            
+            //message.concat(keyList[i]+":");
         }
+        
+        
         node.setKeys(keys);
 
         chordFileSearch = new ChordFileSearch(node);
            
-        message = message.substring(0, message.length()-1);
 
         //publish to index server
         InetAddress IPAddress1;
@@ -538,21 +550,74 @@ public class ChordMainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_btnJoinActionPerformed
 
     private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
-        DefaultTableModel searchResultsDataModel = (DefaultTableModel) tblSearchResults.getModel();
-        
-        while (searchResultsDataModel.getRowCount()>0)
+        try
         {
-           searchResultsDataModel.removeRow(0);
+            DefaultTableModel searchResultsDataModel = (DefaultTableModel) tblSearchResults.getModel();
+        
+            while (searchResultsDataModel.getRowCount()>0)
+            {
+               searchResultsDataModel.removeRow(0);
+            }
+
+            //Contact Index Server and Get Node List
+            String fileQuery = txtFileName.getText().trim();
+            String searchMessage = "SER:"+fileQuery; 
+
+            DatagramSocket socket = new DatagramSocket();
+            byte[] toSend  = searchMessage.getBytes();
+            InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(txtISIP.getText());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, Integer.valueOf(txtISPort.getText()));
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+            System.out.println("Sent: " + searchMessage);
+
+            byte[] receive = new byte[65535]; 
+            DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+            try {
+                socket.receive(DpReceive);
+            } catch (IOException ex) {
+                Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            // Read response from chord
+            String serverResponse = data(receive).toString();
+            System.out.println("Received: " + serverResponse);
+            
+            
+            String[] serverResponseSegments = serverResponse.split(":");
+            if(serverResponseSegments[0].equals("SEARCH_RES")){
+                
+                int searchResultCount = Integer.valueOf(serverResponseSegments[1]);
+                
+                int i=2;
+                String fileName = "";
+                String peerCount = "";
+                
+                while(i<serverResponseSegments.length){
+                    fileName = serverResponseSegments[i];
+                    peerCount = serverResponseSegments[i+1];
+                    String[] dataRow = {fileName, peerCount};
+                    searchResultsDataModel.addRow(dataRow); 
+                    i=i+2;
+                }
+                
+            }
+            
+        }catch(Exception e){
+            System.err.println(e);
         }
-        
-        //TODO: Contact Index Server and Get Node List
-        String fileQuery = txtFileName.getText();
-        String count = String.valueOf(1);
-        
-        String[] data = {fileQuery, count};
-        searchResultsDataModel.addRow(data);  
     }//GEN-LAST:event_btnSearchActionPerformed
 
+    
     private void btnLeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveActionPerformed
         
     }//GEN-LAST:event_btnLeaveActionPerformed
@@ -570,10 +635,15 @@ public class ChordMainFrame extends javax.swing.JFrame {
         if(selectedRow!=-1){
             String fullFileName = tblSearchResults.getModel().getValueAt(selectedRow, 0).toString();
             //String fullFileName = txtFileName.getText()
-            Finger fb = chordFileSearch.searchFile(fullFileName);
-            if(fb!=null)
+            List<Finger> peers = chordFileSearch.searchFile(fullFileName);
+            if(peers!=null && peers.size()>0)
             {
-                JOptionPane.showMessageDialog(null, "File Found at "+fb.getAddress()+":"+fb.getPort(), "File Download", JOptionPane.INFORMATION_MESSAGE);
+                List<String> nodeList = new ArrayList<>();
+                peers.forEach(peer->{
+                    nodeList.add(peer.getAddress()+":"+peer.getPort());
+                });
+                String peerListStr = String.join(", ", nodeList);
+                JOptionPane.showMessageDialog(null, "File Found at Peers - "+ peerListStr, "File Download", JOptionPane.INFORMATION_MESSAGE);
                 //TODO: Do Download Here
             }
             else
