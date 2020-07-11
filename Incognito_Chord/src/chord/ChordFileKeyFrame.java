@@ -6,6 +6,7 @@
 package chord;
 
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Map;
 import javax.swing.table.DefaultTableModel;
 
@@ -115,7 +116,7 @@ public class ChordFileKeyFrame extends javax.swing.JFrame {
         });
     }
 
-    public void setData(long id, Map<String, Finger> keyMap)
+    public void setData(long id, Map<String, List<Finger>> keyMap)
     {
         lblNodeId.setText(lblNodeId.getText() + id);
         
@@ -124,8 +125,11 @@ public class ChordFileKeyFrame extends javax.swing.JFrame {
         int size = keyMap.size();
         for (int i = 0; i < size; i++) {
             String idkey = (String)keyMap.keySet().toArray()[i];
-            String[] data = {idkey, keyMap.get(idkey).getAddress(), keyMap.get(idkey).getPort()+""};
-            model.addRow(data);
+            for(int j = 0; j < keyMap.get(idkey).size(); j++)
+            {
+                String[] data = {idkey, keyMap.get(idkey).get(j).getAddress(), keyMap.get(idkey).get(j).getPort()+""};
+                model.addRow(data);   
+            }
         }
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables

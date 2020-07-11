@@ -6,6 +6,7 @@
 package chord;
 
 import static chord.Sender.data;
+import java.awt.List;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -262,7 +263,13 @@ public class NodeStabilizer extends Thread {
                     {
                         //Store in the found node
                         String id = (String) chordNode.getKeys().keySet().toArray()[i];
-                        message = Chord.STORE + " " + Long.parseLong(id) + " " +  chordNode.getKeys().get(id).getAddress() + " " + chordNode.getKeys().get(id).getPort();
+                        chordNode.getKey(id);
+                        message = Chord.STORE + " " + Long.parseLong(id) + " " +  chordNode.getKey(id).size();
+                        for(int j = 0; j < chordNode.getKey(id).size(); j++)
+                        {
+                            message += " " + chordNode.getKey(id).get(j).getAddress() + " " + chordNode.getKey(id).get(j).getPort();
+                        }
+                        
                         message = Message.customFormat("0000", message.length()) + " " + message;
                         toSend  = message.getBytes(); 
 
@@ -297,12 +304,11 @@ public class NodeStabilizer extends Thread {
                     }
                 }
                 
-                Map<String, Finger> map = this.chordNode.getKeys();
+                
                 for(int j=0; j < keysToRemove.size(); j++)
                 {
-                    map.remove(keysToRemove.get(j));
+                    chordNode.removeKey(keysToRemove.get(j));
                 }
-                this.chordNode.setKeys(map);
                 this.chordNode.release();
                 // Stabilize again after delay
                 Thread.sleep(this.delaySeconds * 1000);
