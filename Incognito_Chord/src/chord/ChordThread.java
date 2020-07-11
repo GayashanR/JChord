@@ -386,19 +386,32 @@ public class ChordThread implements Runnable {
     
     private String findKeyFromCurrentNode(String queryId, Node currentNode){
         String response = "Not found.";
-        Map<String, Finger> nodeKeys = currentNode.getKeys();
+        Map<String, List<Finger>> nodeKeys = currentNode.getKeys();
             
-        Finger fileDetailsFinger = nodeKeys.get(String.valueOf(queryId));
-        if(fileDetailsFinger!=null){
-            System.out.println("File with Key : "+queryId +" found. File Owner : "+fileDetailsFinger.getAddress()+":"+fileDetailsFinger.getPort());
-            response = Chord.VALUE_FOUND + " Request_acknowledged_on_node " + fileDetailsFinger.getAddress() + " " + fileDetailsFinger.getPort();
+        List<Finger> fileOwnerNodes = nodeKeys.get(String.valueOf(queryId));
+        
+        if(fileOwnerNodes!=null && fileOwnerNodes.size()>0){
+            String nodeList = getOwnerNodeList(fileOwnerNodes);
+            System.out.println("File with Key : "+queryId +" found. File Owners : "+nodeList);
+            response = Chord.VALUE_FOUND + " " + fileOwnerNodes.size() + " " + nodeList;
             response = Message.customFormat("0000", response.length()) + " " + response;
         }else{
             System.out.println("File with Key : "+queryId +" Not found.");
-            response = "VALUE_NOT_FOUND Request_acknowledged_on_node";
+            response = "VALUE_NOT_FOUND 0";
             response = Message.customFormat("0000", response.length()) + " " + response;
         }
         return response;
+    }
+    
+    private String getOwnerNodeList(List<Finger> fileOwnerNodes){
+        StringBuilder sb = new StringBuilder();
+        fileOwnerNodes.forEach(node->{
+            sb.append(node.getAddress());
+            sb.append(" ");
+            sb.append(node.getPort());
+            sb.append(" ");
+        });
+        return sb.toString().trim();
     }
     
     private String findKeyUsingFinger(Finger searchFinger, String key){

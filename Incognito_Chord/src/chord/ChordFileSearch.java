@@ -11,6 +11,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -88,7 +89,12 @@ public class ChordFileSearch {
          String[] queryContents = serverResponse.split(" ");
          String command = queryContents[1];
          if(command.equals(Chord.VALUE_FOUND)){
-             Finger fileOwner = new Finger(queryContents[3], Integer.valueOf(queryContents[4]));
+             int noOfNodes = Integer.valueOf(queryContents[2]);
+             
+             Random r = new Random();
+             int randomIndex = r.ints(0, noOfNodes).findFirst().getAsInt();
+             
+             Finger fileOwner = new Finger(queryContents[3+(2*randomIndex)], Integer.valueOf(queryContents[4+(2*randomIndex)]));
              return fileOwner;
          }
          return null;
