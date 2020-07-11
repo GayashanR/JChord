@@ -5,7 +5,7 @@ JChord is a simple overlay-based solution that allows a set of nodes to share co
 # Setup
 
   - Start boostrap node by running `src\chord\bootstrap.java` main class (default port : 55555)
-  - Start Index Server node by running `src\chord\src\chord\indexserver.java` main class (default port : 44444)
+  - Start Index Server node by running `src\chord\src\chord\indexserver.java` main class (default port : 4444)
   - Start nodes by running `src\chord\ChordMainFrame.java` 
  
 # Run
