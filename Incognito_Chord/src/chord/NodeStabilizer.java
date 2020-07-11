@@ -16,6 +16,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -220,7 +222,88 @@ public class NodeStabilizer extends Thread {
                     this.chordNode.release();
 
                 }
+                this.chordNode.acquire();
+                ArrayList<String> keysToRemove = new ArrayList<>();
+                for(int i = 0; i < chordNode.getKeys().size(); i++)
+                {
+                    // Send query to chord
+                    long keyId = Long.parseLong((String) chordNode.getKeys().keySet().toArray()[i]);
+                    String message = Chord.FIND_NODE + " " + Long.parseLong((String) chordNode.getKeys().keySet().toArray()[i]);
+                    message = Message.customFormat("0000", message.length()) + " " + message;
+                    byte[] toSend  = message.getBytes(); 
+                    InetAddress IPAddress; 
+                    try {
+                        IPAddress = InetAddress.getByName(this.chordNode.getFirstPredecessor().getAddress());
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.chordNode.getFirstPredecessor().getPort()); 
+                        socket.send(packet);
+                    } catch (UnknownHostException ex) {
+                        Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                    }
 
+                    System.out.println("Sent: " + message);
+
+                    byte[] receive = new byte[65535]; 
+                    DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                    try {
+                        socket.receive(DpReceive);
+                    } catch (IOException ex) {
+                        Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                    // Read response from chord
+                    String serverResponse = data(receive).toString();
+
+
+                    // Parse out address and port
+                    String[] serverResponseFragments = serverResponse.split(" ", 3);
+                    String[] addressFragments = serverResponseFragments[2].split(" ");
+                    
+                    if(!this.chordNode.getAddress().equals(addressFragments[0]) || (this.chordNode.getPort() != Integer.valueOf(addressFragments[1])))
+                    {
+                        //Store in the found node
+                        String id = (String) chordNode.getKeys().keySet().toArray()[i];
+                        message = Chord.STORE + " " + Long.parseLong(id) + " " +  chordNode.getKeys().get(id).getAddress() + " " + chordNode.getKeys().get(id).getPort();
+                        message = Message.customFormat("0000", message.length()) + " " + message;
+                        toSend  = message.getBytes(); 
+
+                        try {
+                            IPAddress = InetAddress.getByName(addressFragments[0]);
+                            DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, Integer.valueOf(addressFragments[1])); 
+                            socket.send(packet);
+                        } catch (UnknownHostException ex) {
+                            Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+
+                        System.out.println("Sent: " + message);
+
+                        receive = new byte[65535]; 
+                        DpReceive = new DatagramPacket(receive, receive.length); 
+                        try {
+                            socket.receive(DpReceive);
+                        } catch (IOException ex) {
+                            Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+
+                        // Read response from chord
+                        serverResponse = data(receive).toString().trim(); // LEN STOREOK 0//0 for succss 1 for do not 
+
+
+                        // Parse out address and port
+                        serverResponseFragments = serverResponse.split(" ");
+                        if("0".equals(serverResponseFragments[2]))
+                        {
+                            keysToRemove.add((String) chordNode.getKeys().keySet().toArray()[i]);
+                        }
+                    }
+                }
+                
+                Map<String, Finger> map = this.chordNode.getKeys();
+                for(int j=0; j < keysToRemove.size(); j++)
+                {
+                    map.remove(keysToRemove.get(j));
+                }
+                this.chordNode.setKeys(map);
+                this.chordNode.release();
                 // Stabilize again after delay
                 Thread.sleep(this.delaySeconds * 1000);
             }

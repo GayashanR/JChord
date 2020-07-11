@@ -26,6 +26,8 @@ public class Message {
                 break;
             case JOINOK: message=appendLength(Chord.JOINOK+" "+ip+" "+port+" "+0);
                 break;
+            case STORE: message=appendLength(Chord.STORE+" "+ip+" "+port+" "+ name);
+                break;
             case FILES:
                 message = appendLength(Chord.FILES+" "+ip+" "+port+" "+name);
                 break;

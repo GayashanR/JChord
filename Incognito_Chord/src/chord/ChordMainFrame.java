@@ -15,13 +15,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 
@@ -36,6 +35,8 @@ public class ChordMainFrame extends javax.swing.JFrame {
      */
     String resMsg;
     Node node;
+    long[] keyList;
+    private Map<String, Finger> keys = new HashMap<>();
     public ChordMainFrame() {
         initComponents();
         lblJoinStatus.setText("");
@@ -57,9 +58,12 @@ public class ChordMainFrame extends javax.swing.JFrame {
         }
         Random rand = new Random();
         Collections.shuffle(zNames);
-        for(int i = 0; i < rand.nextInt(5) + 1; i++)
+        int size = rand.nextInt(5)+ 1;
+        keyList = new long[size];
+        for(int i = 0; i < size ; i++)
         {
             listModel.addElement(zNames.get(i));
+            keyList[i] = new SHA1Hasher(zNames.get(i)).getLong();
         }
         lstSharedFiles.setModel(listModel);
     }
@@ -108,11 +112,11 @@ public class ChordMainFrame extends javax.swing.JFrame {
         lblDownPct = new javax.swing.JLabel();
         progressBar = new javax.swing.JProgressBar();
         lblDownloadStatus = new javax.swing.JLabel();
-        lblNodeId = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         viewMenu = new javax.swing.JMenu();
         menuItemFingerTable = new javax.swing.JMenuItem();
+        menuItemFileKeys = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -220,9 +224,6 @@ public class ChordMainFrame extends javax.swing.JFrame {
         lblDownloadStatus.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         lblDownloadStatus.setText("Download Percentage");
 
-        lblNodeId.setText(".");
-        lblNodeId.setName(""); // NOI18N
-
         jMenu1.setText("File");
         jMenuBar1.add(jMenu1);
 
@@ -235,6 +236,14 @@ public class ChordMainFrame extends javax.swing.JFrame {
             }
         });
         viewMenu.add(menuItemFingerTable);
+
+        menuItemFileKeys.setText("File keys");
+        menuItemFileKeys.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                menuItemFileKeysActionPerformed(evt);
+            }
+        });
+        viewMenu.add(menuItemFileKeys);
 
         jMenuBar1.add(viewMenu);
 
@@ -278,6 +287,13 @@ public class ChordMainFrame extends javax.swing.JFrame {
                                 .addComponent(txtBSIP, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(30, 30, 30)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(btnLeave, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(btnJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(lblJoinStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap())
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 40, Short.MAX_VALUE)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -286,17 +302,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
                                 .addContainerGap())
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(jLabel10)
-                                .addGap(71, 71, 71))))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(30, 30, 30)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(lblNodeId)
-                                .addGap(0, 0, Short.MAX_VALUE))
-                            .addComponent(btnLeave, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(btnJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(lblJoinStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addContainerGap())))
+                                .addGap(71, 71, 71))))))
             .addComponent(jSeparator4)
             .addComponent(jSeparator5)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
@@ -343,9 +349,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 5, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(lblNodeId))
+                .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
@@ -441,7 +445,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         RegisterResponse regRes = register();
         if(!regRes.isInitialNode())
         {
-            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps(), regRes.getpeerPorts());
+            node = new Node(txtIP.getText(), txtPort.getText(), regRes.getPeerIps()[0], regRes.getpeerPorts()[0]+"");
         }
         else
         {
@@ -449,7 +453,12 @@ public class ChordMainFrame extends javax.swing.JFrame {
         }
         
         lblJoinStatus.setText(resMsg);
-        lblNodeId.setText(String.valueOf(node.getId()));
+        
+        for(int i = 0; i < keyList.length; i++)
+        {
+            keys.put(keyList[i]+"", new Finger(txtIP.getText(), Integer.valueOf(txtPort.getText())));
+        }
+        node.setKeys(keys);
         
         
     }//GEN-LAST:event_btnJoinActionPerformed
@@ -481,6 +490,13 @@ public class ChordMainFrame extends javax.swing.JFrame {
     private void btnLeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveActionPerformed
         
     }//GEN-LAST:event_btnLeaveActionPerformed
+
+    private void menuItemFileKeysActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemFileKeysActionPerformed
+        ChordFileKeyFrame fileKeyFrame = new ChordFileKeyFrame();
+        fileKeyFrame.setData(node.getId(), node.getKeys());
+        fileKeyFrame.setVisible(true);
+        fileKeyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }//GEN-LAST:event_menuItemFileKeysActionPerformed
 
     //generate SHA/MD5 file checksum
     private static String getFileChecksum(MessageDigest digest, File file) throws IOException
@@ -660,9 +676,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
     private javax.swing.JLabel lblDownPct;
     private javax.swing.JLabel lblDownloadStatus;
     private javax.swing.JLabel lblJoinStatus;
-    private javax.swing.JLabel lblNodeId;
     private javax.swing.JList<String> lstSearchedFiles;
     private javax.swing.JList<String> lstSharedFiles;
+    private javax.swing.JMenuItem menuItemFileKeys;
     private javax.swing.JMenuItem menuItemFingerTable;
     private javax.swing.JProgressBar progressBar;
     private javax.swing.JTextField txtBSIP;
