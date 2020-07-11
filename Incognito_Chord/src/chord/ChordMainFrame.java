@@ -462,6 +462,9 @@ public class ChordMainFrame extends javax.swing.JFrame {
         //Message String creation
         String message = "ADD:";
 
+        //Message String creation
+        String message = "ADD:";
+
         for(int i = 0; i < keyList.length; i++)
         {
             List<Finger> lst = new ArrayList<>();
@@ -470,6 +473,22 @@ public class ChordMainFrame extends javax.swing.JFrame {
             message.concat(keyList[i]+":");
         }
         node.setKeys(keys);
+        message = message.substring(0, message.length()-1);
+
+        //publish to index server
+        InetAddress IPAddress1;
+        try {
+            DatagramSocket socket= new DatagramSocket();
+            byte[] toSend1  = message.getBytes();
+            IPAddress1 = InetAddress.getByName(txtISIP.getText());
+            DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, Integer.parseInt(txtISPort.getText()));
+            socket.send(packet);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
         message = message.substring(0, message.length()-1);
 
         //publish to index server
