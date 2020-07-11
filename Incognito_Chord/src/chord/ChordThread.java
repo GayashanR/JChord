@@ -93,6 +93,29 @@ public class ChordThread implements Runnable {
                         
                         break;
                     }
+                    case Chord.STORE: {
+                        this.chordNode.acquire();
+                        
+                        // Move fist predecessor to second
+                        this.chordNode.addKey(content.split(" ")[0], new Finger(content.split(" ")[1], Integer.valueOf(content.split(" ")[2])));
+                        
+                        // Release lock
+                        this.chordNode.release();
+                        // Send response back to client
+                        String message = Chord.STOREOK + " " + "0";
+                        message = Message.customFormat("0000", message.length()) + " " + message;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
+                        
+                        break;
+                    }
                     case Chord.NODE_FOUND: {
                         String response = this.findNode(content);
                         System.out.println("Sent: " + response);
