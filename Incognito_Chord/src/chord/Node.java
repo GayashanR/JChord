@@ -36,6 +36,7 @@ public class Node {
     private Finger firstSuccessor;
     private Finger secondSuccessor;
     private Map<Integer, Finger> fingers = new HashMap<>();
+    private Map<String, Finger> keys = new HashMap<>();
     private long id;
     private String hex;
     private Semaphore semaphore = new Semaphore(1);
@@ -247,7 +248,23 @@ public class Node {
     public Map<Integer, Finger> getFingers() {
         return this.fingers;
     }
+    
+    public Map<String, Finger> getKeys() {
+        return this.keys;
+    }
+    
+    public void setKeys(Map<String, Finger> keys) {
+        this.keys = keys;
+    }
 
+    public void addKey(String id, Finger node) {
+        this.keys.put(id, node);
+    }
+    
+    public Finger getKey(String id) {
+        return this.keys.get((String)id);
+    }
+    
     public int getPort() {
         return this.port;
     }
