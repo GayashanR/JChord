@@ -77,18 +77,14 @@ public class Node {
      *
      * @param address               The address of this node
      * @param port                  The port that this Chord node needs to listen on
-     * @param existingNodeAddress   The address of the existing ring member
-     * @param existingNodePort      The port of the existing ring member
+     * @param existingNodeIps       The IP addresses of the existing ring members
+     * @param existingNodePorts      The ports of the existing ring members
      */
-    public Node(String address, String port, String existingNodeAddress, String existingNodePort) {
+    public Node(String address, String port, String[] existingNodeIps, int[] existingNodePorts) {
         // Set node fields
         this.address = address;
         this.port = Integer.valueOf(port);
-
-        // Set contact node fields
-        this.existingNodeAddress = existingNodeAddress;
-        this.existingNodePort = Integer.valueOf(existingNodePort);
-
+        
         // Hash address
         SHA1Hasher sha1Hasher = new SHA1Hasher(this.address + ":" + this.port);
         this.id = sha1Hasher.getLong();
@@ -97,8 +93,14 @@ public class Node {
         // Logging
         System.out.println("Joining the Chord ring");
         System.out.println("You are listening on port " + this.port);
-        System.out.println("Connected to existing node " + this.existingNodeAddress + ":" + this.existingNodePort);
         System.out.println("Your position is " + this.hex + " (" + this.id + ")");
+
+        int closestNodeIndex = getClosestNodeArrayIndex(this.id, existingNodeIps, existingNodePorts);
+        
+        // Set contact node fields
+        this.existingNodeAddress = existingNodeIps[closestNodeIndex];
+        this.existingNodePort = existingNodePorts[closestNodeIndex];
+        System.out.println("Connected to existing node " + this.existingNodeAddress + ":" + this.existingNodePort);
 
         // Initialize finger table and successors
         this.initializeFingers();
@@ -124,7 +126,7 @@ public class Node {
             // Open connection to contact node
             DatagramSocket socket;
             try {
-                socket = new DatagramSocket(Config.MY_PORT);
+                socket = new DatagramSocket();
 
                 // Open reader/writer to chord node
                 BigInteger bigQuery = BigInteger.valueOf(2L);
@@ -194,7 +196,7 @@ public class Node {
         if (!this.address.equals(this.firstSuccessor.getAddress()) || (this.port != this.firstSuccessor.getPort())) {
             DatagramSocket socket;
             try {
-                socket = new DatagramSocket(Config.MY_PORT);
+                socket = new DatagramSocket();
 
                 // Tell successor that this node is its new predecessor
                 String message = Chord.JOIN + " " + this.getAddress() + " " + this.getPort();
@@ -222,6 +224,37 @@ public class Node {
                 e.printStackTrace();
             }
         }
+    }
+    
+    private int getClosestNodeArrayIndex(long currentNodeId, String[] existingNodeIps, int[] existingNodePorts){
+        long minimumDistance = getDistanceToNode(currentNodeId, existingNodeIps[0], existingNodePorts[0]);
+        int minimumDistanceNodeIndex=0;
+        
+        for(int i=1; i<existingNodeIps.length; i++){
+            long distanceToNeighbour = getDistanceToNode(currentNodeId, existingNodeIps[i], existingNodePorts[i]);
+            if(minimumDistance>distanceToNeighbour){
+                minimumDistanceNodeIndex = i;
+            }
+        }
+        
+        return minimumDistanceNodeIndex;
+    }
+    
+    private long getDistanceToNode(long currentNodeId, String toNodeIp, int toNodePort){
+        SHA1Hasher sha1Hasher = new SHA1Hasher(toNodeIp + ":" + toNodePort);
+        long toNodeId = sha1Hasher.getLong();
+        
+        if(toNodeId>=currentNodeId){
+            return toNodeId-currentNodeId;
+        }
+        else{
+            return getUpperBoundForNodeIds()+toNodeId-currentNodeId;
+        }
+    }
+    
+    private long getUpperBoundForNodeIds(){
+        BigInteger bigResult = BigInteger.valueOf(2L).pow(32);
+        return bigResult.longValue();
     }
 
     /**
