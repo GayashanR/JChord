@@ -5,15 +5,22 @@
  */
 package chord;
 
+import static chord.Sender.data;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.math.BigInteger;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -29,6 +36,7 @@ public class Node {
     private Finger firstSuccessor;
     private Finger secondSuccessor;
     private Map<Integer, Finger> fingers = new HashMap<>();
+    private Map<String, Finger> keys = new HashMap<>();
     private long id;
     private String hex;
     private Semaphore semaphore = new Semaphore(1);
@@ -101,7 +109,7 @@ public class Node {
         new Thread(new NodeStabilizer(this)).start();
         new Thread(new Heart(this)).start();
     }
-            
+
     /**
      * Initializes finger table. If an existing node has been defined it will use that node to perform lookups. Otherwise, this node is the only node in the ring and all fingers will refer to self.
      */
@@ -114,13 +122,11 @@ public class Node {
             }
         } else {
             // Open connection to contact node
+            DatagramSocket socket;
             try {
-                Socket socket = new Socket(this.existingNodeAddress, this.existingNodePort);
+                socket = new DatagramSocket(Config.MY_PORT);
 
                 // Open reader/writer to chord node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
                 BigInteger bigQuery = BigInteger.valueOf(2L);
                 BigInteger bigSelfId = BigInteger.valueOf(this.id);
 
@@ -129,25 +135,44 @@ public class Node {
                     bigResult = bigResult.add(bigSelfId);
 
                     // Send query to chord
-                    socketWriter.println(Chord.FIND_NODE + ":" + bigResult.longValue());
-                    System.out.println("Sent: " + Chord.FIND_NODE + ":" + bigResult.longValue());
+                    String message = Chord.FIND_NODE + " " + bigResult.longValue();
+                    message = Message.customFormat("0000", message.length()) + " " + message;
+                    byte[] toSend  = message.getBytes(); 
+                    InetAddress IPAddress; 
+                    try {
+                        IPAddress = InetAddress.getByName(this.existingNodeAddress);
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.existingNodePort); 
+                        System.out.println("sending message:"+message+"\nfrom-"+Config.MY_IP+":"+Config.MY_PORT+",to-"+this.existingNodeAddress+":"+this.existingNodePort);
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    } catch (UnknownHostException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    System.out.println("Sent: " + message);
 
+                    byte[] receive = new byte[65535]; 
+                    DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                    try {
+                        socket.receive(DpReceive);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    
                     // Read response from chord
-                    String serverResponse = socketReader.readLine();
+                    String serverResponse = data(receive).toString();
 
                     // Parse out address and port
-                    String[] serverResponseFragments = serverResponse.split(":", 2);
-                    String[] addressFragments = serverResponseFragments[1].split(":");
+                    String[] serverResponseFragments = serverResponse.split(" ", 3);
+                    String[] addressFragments = serverResponseFragments[2].split(" ");
 
                     // Add response finger to table
                     this.fingers.put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
 
                     System.out.println("Received: " + serverResponse);
                 }
-
-                // Close connections
-                socketWriter.close();
-                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 this.logError("Could not open connection to existing node");
@@ -167,41 +192,35 @@ public class Node {
 
         // Notify the first successor that we are the new predecessor, provided we do not open a connection to ourselves
         if (!this.address.equals(this.firstSuccessor.getAddress()) || (this.port != this.firstSuccessor.getPort())) {
+            DatagramSocket socket;
             try {
-                Socket socket = new Socket(this.firstSuccessor.getAddress(), this.firstSuccessor.getPort());
-
-                // Open writer to successor node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+                socket = new DatagramSocket(Config.MY_PORT);
 
                 // Tell successor that this node is its new predecessor
-                socketWriter.println(Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort());
-                System.out.println("Sent: " + Chord.NEW_PREDECESSOR + ":" + this.getAddress() + ":" + this.getPort() + " to " + this.firstSuccessor.getAddress() + ":" + this.firstSuccessor.getPort());
+                String message = Chord.JOIN + " " + this.getAddress() + " " + this.getPort();
+                message = Message.customFormat("0000", message.length()) + " " + message;
+                byte[] toSend  = message.getBytes(); 
+                InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(this.firstSuccessor.getAddress());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.firstSuccessor.getPort()); 
+                    System.out.println("sending message:"+message+"\nfrom-"+Config.MY_IP+":"+Config.MY_PORT+",to-"+this.firstSuccessor.getAddress()+":"+this.firstSuccessor.getPort());
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                System.out.println("Sent: " + message);
 
                 // Close connections
-                socketWriter.close();
                 socket.close();
             } catch (IOException e) {
                 this.logError("Could not open connection to first successor");
                 e.printStackTrace();
             }
-        }
-    }
-
-    /***
-     *
-     * Initialize file hashing and store in nodes
-     *
-     */
-    private void storeFilesNodes() {
-
-        try {
-            Socket socket = new Socket(this.existingNodeAddress, this.existingNodePort);
-            // Open reader/writer to chord node
-            PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            socketWriter.println(Chord.STORE + ":" + this.getAddress() + ":" + this.getPort());
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -229,7 +248,23 @@ public class Node {
     public Map<Integer, Finger> getFingers() {
         return this.fingers;
     }
+    
+    public Map<String, Finger> getKeys() {
+        return this.keys;
+    }
+    
+    public void setKeys(Map<String, Finger> keys) {
+        this.keys = keys;
+    }
 
+    public void addKey(String id, Finger node) {
+        this.keys.put(id, node);
+    }
+    
+    public Finger getKey(String id) {
+        return this.keys.get((String)id);
+    }
+    
     public int getPort() {
         return this.port;
     }

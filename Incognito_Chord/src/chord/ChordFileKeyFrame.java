@@ -6,20 +6,19 @@
 package chord;
 
 import java.math.BigInteger;
-import java.util.HashMap;
 import java.util.Map;
 import javax.swing.table.DefaultTableModel;
 
 /**
  *
- * @author GayashanRathnavibush
+ * @author mailg
  */
-public class FingerTableFrame extends javax.swing.JFrame {
+public class ChordFileKeyFrame extends javax.swing.JFrame {
 
     /**
-     * Creates new form FingerTableFrame
+     * Creates new form ChordFileKeyFrame
      */
-    public FingerTableFrame() {
+    public ChordFileKeyFrame() {
         initComponents();
     }
 
@@ -32,57 +31,50 @@ public class FingerTableFrame extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        lblTopic = new javax.swing.JLabel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        tblFingers = new javax.swing.JTable();
+        lblNodeId = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        tblKeys = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        lblTopic.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
-        lblTopic.setText("Finger Table of Node ID ");
+        lblNodeId.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
+        lblNodeId.setText("File Keys of Node ID ");
 
-        tblFingers.setModel(new javax.swing.table.DefaultTableModel(
+        tblKeys.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
-                "Finger", "Successor", "IP Address", "Port"
+                "Key", "Source IP Address", "Source Port"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
-            };
-            boolean[] canEdit = new boolean [] {
-                false, false, true, false
+                java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
 
             public Class getColumnClass(int columnIndex) {
                 return types [columnIndex];
             }
-
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit [columnIndex];
-            }
         });
-        jScrollPane1.setViewportView(tblFingers);
+        jScrollPane2.setViewportView(tblKeys);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(lblTopic, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 579, Short.MAX_VALUE)
             .addComponent(jSeparator1)
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 512, Short.MAX_VALUE)
+            .addComponent(lblNodeId, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addComponent(lblTopic, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(lblNodeId, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(4, 4, 4)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 251, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 313, Short.MAX_VALUE))
         );
 
         pack();
@@ -105,48 +97,41 @@ public class FingerTableFrame extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(FingerTableFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ChordFileKeyFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(FingerTableFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ChordFileKeyFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(FingerTableFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ChordFileKeyFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(FingerTableFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ChordFileKeyFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new FingerTableFrame().setVisible(true);
+                new ChordFileKeyFrame().setVisible(true);
             }
         });
     }
-    
-    public void setData(long id, Map<Integer, Finger> fingerMap)
+
+    public void setData(long id, Map<String, Finger> keyMap)
     {
-        lblTopic.setText(lblTopic.getText() + id);
+        lblNodeId.setText(lblNodeId.getText() + id);
         
-        DefaultTableModel model = (DefaultTableModel) tblFingers.getModel();
+        DefaultTableModel model = (DefaultTableModel) tblKeys.getModel();
         
-        BigInteger bigQuery = BigInteger.valueOf(2L);
-        BigInteger bigSelfId = BigInteger.valueOf(id);
-        for (int i = 0; i < 32; i++) {
-            BigInteger bigResult = bigQuery.pow(i);
-            bigResult = bigResult.add(bigSelfId);
-            long idFinger = bigResult.longValue();
-            if (idFinger >= Chord.RING_SIZE) {
-            idFinger -= Chord.RING_SIZE;
-            }
-            String[] data = {idFinger + "", fingerMap.get(i).getId()+"", fingerMap.get(i).getAddress(), fingerMap.get(i).getPort()+""};
+        int size = keyMap.size();
+        for (int i = 0; i < size; i++) {
+            String idkey = (String)keyMap.keySet().toArray()[i];
+            String[] data = {idkey, keyMap.get(idkey).getAddress(), keyMap.get(idkey).getPort()+""};
             model.addRow(data);
         }
     }
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSeparator jSeparator1;
-    private javax.swing.JLabel lblTopic;
-    private javax.swing.JTable tblFingers;
+    private javax.swing.JLabel lblNodeId;
+    private javax.swing.JTable tblKeys;
     // End of variables declaration//GEN-END:variables
 }

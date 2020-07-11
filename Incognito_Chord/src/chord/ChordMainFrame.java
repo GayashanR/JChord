@@ -7,11 +7,20 @@ package chord;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 
@@ -26,6 +35,8 @@ public class ChordMainFrame extends javax.swing.JFrame {
      */
     String resMsg;
     Node node;
+    long[] keyList;
+    private Map<String, Finger> keys = new HashMap<>();
     public ChordMainFrame() {
         initComponents();
         lblJoinStatus.setText("");
@@ -47,9 +58,12 @@ public class ChordMainFrame extends javax.swing.JFrame {
         }
         Random rand = new Random();
         Collections.shuffle(zNames);
-        for(int i = 0; i < rand.nextInt(5) + 1; i++)
+        int size = rand.nextInt(5)+ 1;
+        keyList = new long[size];
+        for(int i = 0; i < size ; i++)
         {
             listModel.addElement(zNames.get(i));
+            keyList[i] = new SHA1Hasher(zNames.get(i)).getLong();
         }
         lstSharedFiles.setModel(listModel);
     }
@@ -102,6 +116,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         jMenu1 = new javax.swing.JMenu();
         viewMenu = new javax.swing.JMenu();
         menuItemFingerTable = new javax.swing.JMenuItem();
+        menuItemFileKeys = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -138,7 +153,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         jLabel7.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel7.setText("BS Port");
 
-        txtBSPort.setText("5555");
+        txtBSPort.setText("55555");
         txtBSPort.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtBSPortActionPerformed(evt);
@@ -178,6 +193,11 @@ public class ChordMainFrame extends javax.swing.JFrame {
 
         btnLeave.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         btnLeave.setText("Leave the Network");
+        btnLeave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLeaveActionPerformed(evt);
+            }
+        });
 
         jLabel11.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel11.setText("File Name");
@@ -190,6 +210,11 @@ public class ChordMainFrame extends javax.swing.JFrame {
 
         btnSearch.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         btnSearch.setText("Search the Network");
+        btnSearch.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSearchActionPerformed(evt);
+            }
+        });
 
         jScrollPane2.setViewportView(lstSearchedFiles);
 
@@ -211,6 +236,14 @@ public class ChordMainFrame extends javax.swing.JFrame {
             }
         });
         viewMenu.add(menuItemFingerTable);
+
+        menuItemFileKeys.setText("File keys");
+        menuItemFileKeys.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                menuItemFileKeysActionPerformed(evt);
+            }
+        });
+        viewMenu.add(menuItemFileKeys);
 
         jMenuBar1.add(viewMenu);
 
@@ -421,9 +454,83 @@ public class ChordMainFrame extends javax.swing.JFrame {
         
         lblJoinStatus.setText(resMsg);
         
+        for(int i = 0; i < keyList.length; i++)
+        {
+            keys.put(keyList[i]+"", new Finger(txtIP.getText(), Integer.valueOf(txtPort.getText())));
+        }
+        node.setKeys(keys);
+        
         
     }//GEN-LAST:event_btnJoinActionPerformed
 
+    private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
+        try {
+            File file = new File("Abdc");
+            file.createNewFile();
+            
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+            raf.setLength(1024*1024*10);
+            raf.close();
+            
+            MessageDigest shaDigest;
+            try {
+                shaDigest = MessageDigest.getInstance("SHA-1");
+                System.out.println(getFileChecksum(shaDigest, file));
+            } catch (NoSuchAlgorithmException ex) {
+                Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            
+            
+        } catch (IOException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_btnSearchActionPerformed
+
+    private void btnLeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveActionPerformed
+        
+    }//GEN-LAST:event_btnLeaveActionPerformed
+
+    private void menuItemFileKeysActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemFileKeysActionPerformed
+        ChordFileKeyFrame fileKeyFrame = new ChordFileKeyFrame();
+        fileKeyFrame.setData(node.getId(), node.getKeys());
+        fileKeyFrame.setVisible(true);
+        fileKeyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }//GEN-LAST:event_menuItemFileKeysActionPerformed
+
+    //generate SHA/MD5 file checksum
+    private static String getFileChecksum(MessageDigest digest, File file) throws IOException
+    {
+        //Get file input stream for reading the file content
+        FileInputStream fis = new FileInputStream(file);
+
+        //Create byte array to read data in chunks
+        byte[] byteArray = new byte[1024];
+        int bytesCount = 0; 
+
+        //Read file data and update in message digest
+        while ((bytesCount = fis.read(byteArray)) != -1) {
+            digest.update(byteArray, 0, bytesCount);
+        };
+
+        //close the stream; We don't need it now.
+        fis.close();
+
+        //Get the hash's bytes
+        byte[] bytes = digest.digest();
+
+        //This bytes[] has bytes in decimal format;
+        //Convert it to hexadecimal format
+        StringBuilder sb = new StringBuilder();
+        for(int i=0; i< bytes.length ;i++)
+        {
+            sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+        }
+
+        //return complete hash
+       return sb.toString();
+    }
+    
     /**
      * @param args the command line arguments
      */
@@ -572,6 +679,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
     private javax.swing.JLabel lblJoinStatus;
     private javax.swing.JList<String> lstSearchedFiles;
     private javax.swing.JList<String> lstSharedFiles;
+    private javax.swing.JMenuItem menuItemFileKeys;
     private javax.swing.JMenuItem menuItemFingerTable;
     private javax.swing.JProgressBar progressBar;
     private javax.swing.JTextField txtBSIP;

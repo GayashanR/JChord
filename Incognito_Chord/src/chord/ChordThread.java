@@ -5,11 +5,18 @@
  */
 package chord;
 
+import static chord.Sender.data;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -17,9 +24,9 @@ import java.net.Socket;
  */
 public class ChordThread implements Runnable {
     private Node chordNode;
-    private Socket socket = null;
+    private DatagramSocket socket = null;
 
-    public ChordThread(Node chordNode, Socket socket) {
+    public ChordThread(Node chordNode, DatagramSocket socket) {
         this.chordNode = chordNode;
         this.socket = socket;
     }
@@ -29,101 +36,165 @@ public class ChordThread implements Runnable {
      */
     public void run() {
         System.out.println("Client connection established on port " + this.socket.getLocalPort());
-
-        try {
+        while(true)
+        {
             // Create readers and writers from socket
-            PrintWriter socketWriter = new PrintWriter(this.socket.getOutputStream(), true);
-            BufferedReader socketReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-
+            byte[] receive = new byte[65535];
+            DatagramPacket DpReceive = new DatagramPacket(receive, receive.length);
+            try {
+                socket.receive(DpReceive);
+            } catch (IOException ex) {
+                Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+            }
             // Read input from client
             String query;
-            while ((query = socketReader.readLine()) != null) {
+            if((query = data(receive).toString().trim()) != null) {
                 // Split the query on the : token in order to get the command and the content portions
-                String[] queryContents = query.split(":", 2);
-                String command = queryContents[0];
-                String content = queryContents[1];
-                System.out.println("COMMAND : "+command);
-                System.out.println("CONTENT : "+content);
-
+                String[] queryContents = query.split(" ", 3);
+                String command = queryContents[1];
+                String content = queryContents[2];
+                
                 System.out.println("Received: " + command + " " + content);
-
+                
                 switch (command) {
                     case Chord.FIND_VALUE: {
                         String response = this.findValue(content);
                         System.out.println("Sent: " + response);
-
+                        
                         // Send response back to client
-                        socketWriter.println(response);
-
-                        break;
-                    }
-                    case Chord.STORE: {
-                        String response = this.store(content);
-                        System.out.println("Store: " + response);
-                        socketWriter.println(response);
+                        String message = response;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
+                        
                         break;
                     }
                     case Chord.FIND_NODE: {
                         String response = this.findNode(content);
                         System.out.println("Sent: " + response);
-
+                        
                         // Send response back to client
-                        socketWriter.println(response);
-
+                        String message = response;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
+                        
                         break;
                     }
-                    case Chord.NEW_PREDECESSOR: {
-                        // Parse address and port from message
-                        String[] contentFragments = content.split(":");
-                        String address = contentFragments[0];
-                        int port = Integer.valueOf(contentFragments[1]);
-
-                        // Acquire lock
+                    case Chord.STORE: {
                         this.chordNode.acquire();
-
+                        
                         // Move fist predecessor to second
-                        this.chordNode.setSecondPredecessor(this.chordNode.getFirstPredecessor());
-
-                        // Set first predecessor to new finger received in message
-                        this.chordNode.setFirstPredecessor(new Finger(address, port));
-
+                        this.chordNode.addKey(content.split(" ")[0], new Finger(content.split(" ")[1], Integer.valueOf(content.split(" ")[2])));
+                        
                         // Release lock
                         this.chordNode.release();
-
+                        // Send response back to client
+                        String message = Chord.STOREOK + " " + "0";
+                        message = Message.customFormat("0000", message.length()) + " " + message;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
+                        
+                        break;
+                    }
+                    case Chord.NODE_FOUND: {
+                        String response = this.findNode(content);
+                        System.out.println("Sent: " + response);
+                        
+                        // Send response back to client
+                        String message = response;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
+                        break;
+                    }
+                    case Chord.JOIN: {
+                        // Parse address and port from message
+                        String[] contentFragments = content.split(" ");
+                        String address = contentFragments[0];
+                        int port = Integer.valueOf(contentFragments[1]);
+                        
+                        // Acquire lock
+                        this.chordNode.acquire();
+                        
+                        // Move fist predecessor to second
+                        this.chordNode.setSecondPredecessor(this.chordNode.getFirstPredecessor());
+                        
+                        // Set first predecessor to new finger received in message
+                        this.chordNode.setFirstPredecessor(new Finger(address, port));
+                        
+                        // Release lock
+                        this.chordNode.release();
+                        
                         break;
                     }
                     case Chord.REQUEST_PREDECESSOR: {
                         // Return the first predecessor address:port
-                        String response = this.chordNode.getFirstPredecessor().getAddress() + ":" + this.chordNode.getFirstPredecessor().getPort();
+                        String response = this.chordNode.getFirstPredecessor().getAddress() + " " + this.chordNode.getFirstPredecessor().getPort();
                         System.out.println("Sent: " + response);
-
+                        
                         // Send response back to client
-                        socketWriter.println(response);
-
+                        String message = response;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
+                        
                         break;
                     }
                     case Chord.PING_QUERY: {
                         // Reply to the ping
                         String response = Chord.PING_RESPONSE;
                         System.out.println("Sent: " + response);
-
+                        
                         // Send response back to client
-                        socketWriter.println(response);
-
+                        String message = response;
+                        
+                        byte[] toSend  = message.getBytes();
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, DpReceive.getAddress(), DpReceive.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        
                         break;
                     }
                 }
             }
-
+            
             // Close connections
-            socketWriter.close();
-            socketReader.close();
-            this.socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-
-        System.out.println("Client connection terminated on port " + this.socket.getLocalPort());
     }
 
     private String findValue(String query) {
@@ -140,12 +211,15 @@ public class ChordThread implements Runnable {
 
         // If the query is greater than our predecessor id and less than equal to our id then we have the value
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = "VALUE_FOUND:Request acknowledged on node " + this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+            response = "VALUE_FOUND Request_acknowledged_on_node" + this.chordNode.getAddress() + " " + this.chordNode.getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else if (this.doesQueryIdBelongToNextNode(queryId)) {
-            response = "VALUE_FOUND:Request acknowledged on node " + this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
+            response = "VALUE_FOUND Request_acknowledged_on_node" + this.chordNode.getFirstSuccessor().getAddress() + " " + this.chordNode.getFirstSuccessor().getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
+
             this.chordNode.acquire();
 
             // Look for a node identifier in the finger table that is less than the key id and closest in the ID space to the key id
@@ -170,87 +244,44 @@ public class ChordThread implements Runnable {
 
             try {
                 // Open socket to chord node
-                Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
-
-                // Open reader/writer to chord node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                DatagramSocket socket = new DatagramSocket();
 
                 // Send query to chord
-                socketWriter.println(Chord.FIND_VALUE + ":" + query);
-                System.out.println("Sent: " + Chord.FIND_VALUE + ":" + query);
+                String message = Chord.FIND_VALUE + " " + query;
+                message = Message.customFormat("0000", message.length()) + " " + message;
+                        
+                byte[] toSend  = message.getBytes();
+                InetAddress IPAddress; 
+                    try {
+                        IPAddress = InetAddress.getByName(closestPredecessor.getAddress());
+                        DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, closestPredecessor.getPort());
+                        try {
+                            socket.send(packet);
+                        } catch (IOException ex) {
+                            Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    } catch (UnknownHostException ex) {
+                        Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    
+                System.out.println("Sent: " + message);
+
+                byte[] receive = new byte[65535]; 
+                DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                try {
+                    socket.receive(DpReceive);
+                } catch (IOException ex) {
+                    Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
                 // Read response from chord
-                String serverResponse = socketReader.readLine();
+                String serverResponse = data(receive).toString();
+                        
                 System.out.println("Response from node " + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
 
                 response = serverResponse;
 
                 // Close connections
-                socketWriter.close();
-                socketReader.close();
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            this.chordNode.release();
-        }
-
-        return response;
-    }
-
-    private String store(String fileHash){
-        // Hash file name
-        SHA1Hasher qh = new SHA1Hasher(fileHash);
-        long queryId = qh.getLong();
-
-        if (queryId >= Chord.RING_SIZE) {
-            queryId -= Chord.RING_SIZE;
-        }
-
-        String response = "Store Location Not found.";
-
-        if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = Chord.STORE_LOCATION_FOUND + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
-        } else if(this.doesQueryIdBelongToNextNode(queryId)) {
-            response = Chord.STORE_LOCATION_FOUND + ":" +  this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
-        } else { // traverse finger tables
-            long minimumDistance = Chord.RING_SIZE;
-            Finger closestPredecessor = null;
-            this.chordNode.acquire();
-            for (Finger finger : this.chordNode.getFingers().values()) {
-                long distance;
-                if (queryId >= finger.getId()) {
-                    distance = queryId - finger.getId();
-                } else {
-                    distance = queryId + Chord.RING_SIZE - finger.getId();
-                }
-                if (distance < minimumDistance) {
-                    minimumDistance = distance;
-                    closestPredecessor = finger;
-                }
-            }
-            System.out.println(Chord.STORE_LOCATION_FOUND + ":" + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
-
-            try {
-                Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                // Send query to chord
-                socketWriter.println(Chord.STORE + ":" + queryId);
-                System.out.println("Sent: " + Chord.STORE + ":" + queryId);
-
-                // Read response from chord
-                String serverResponse = socketReader.readLine();
-                System.out.println(Chord.STORE_LOCATION_FOUND + ":" + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
-
-                response = serverResponse;
-
-                // Close connections
-                socketWriter.close();
-                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -264,7 +295,6 @@ public class ChordThread implements Runnable {
 
     private String findNode(String query) {
         long queryId = Long.valueOf(query);
-        System.out.println("######" + query);
 
         // Wrap the queryid if it is as big as the ring
         if (queryId >= Chord.RING_SIZE) {
@@ -275,9 +305,11 @@ public class ChordThread implements Runnable {
 
         // If the query is greater than our predecessor id and less than equal to our id then we have the value
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
-            response = Chord.NODE_FOUND + ":" +  this.chordNode.getAddress() + ":" + this.chordNode.getPort();
+            response = Chord.NODE_FOUND + " " +  this.chordNode.getAddress() + " " + this.chordNode.getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else if(this.doesQueryIdBelongToNextNode(queryId)) {
-            response = Chord.NODE_FOUND + ":" +  this.chordNode.getFirstSuccessor().getAddress() + ":" + this.chordNode.getFirstSuccessor().getPort();
+            response = Chord.NODE_FOUND + " " +  this.chordNode.getFirstSuccessor().getAddress() + " " + this.chordNode.getFirstSuccessor().getPort();
+            response = Message.customFormat("0000", response.length()) + " " + response;
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
@@ -306,25 +338,44 @@ public class ChordThread implements Runnable {
 
             try {
                 // Open socket to chord node
-                Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
 
-                // Open reader/writer to chord node
-                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
+                DatagramSocket socket = new DatagramSocket();
                 // Send query to chord
-                socketWriter.println(Chord.FIND_NODE + ":" + queryId);
-                System.out.println("Sent: " + Chord.FIND_NODE + ":" + queryId);
+                String message = Chord.FIND_NODE + " " + queryId;
+                message = Message.customFormat("0000", message.length()) + " " + message;
+                byte[] toSend  = message.getBytes();
+                InetAddress IPAddress; 
+                try {
+                    IPAddress = InetAddress.getByName(closestPredecessor.getAddress());
+                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, closestPredecessor.getPort());
+                    try {
+                        socket.send(packet);
+                    } catch (IOException ex) {
+                        Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                System.out.println("Sent: " + message);
+
+                byte[] receive = new byte[65535]; 
+                DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+                try {
+                    socket.receive(DpReceive);
+                } catch (IOException ex) {
+                    Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
                 // Read response from chord
-                String serverResponse = socketReader.readLine();
+                String serverResponse = data(receive).toString();
+                        
+                
                 System.out.println("Response from node " + closestPredecessor.getAddress() + ", port " + closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
 
                 response = serverResponse;
 
                 // Close connections
-                socketWriter.close();
-                socketReader.close();
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
