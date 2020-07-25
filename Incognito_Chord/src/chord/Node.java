@@ -111,6 +111,7 @@ public class Node {
         new Thread(new NodeListener(this)).start();
         new Thread(new NodeStabilizer(this)).start();
         new Thread(new Heart(this)).start();
+        new Thread(new DownloadListener(this)).start();
     }
 
     /**
