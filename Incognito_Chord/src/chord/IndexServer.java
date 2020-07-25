@@ -1,4 +1,3 @@
-package chord;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -54,10 +53,10 @@ public class IndexServer {
                 try {
                     sock.receive(DpReceive);
                 } catch (IOException ex) {
-                    Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(IndexServer.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 // Read input from client
-                String query = Sender.data(receive).toString().trim();
+                String query = data(receive).toString().trim();
 
                 if (query != null) {
                     filesnames = query;
@@ -132,7 +131,19 @@ public class IndexServer {
        
     }
     
-
+    public static StringBuilder data(byte[] a) 
+    { 
+        if (a == null) 
+            return null; 
+        StringBuilder ret = new StringBuilder(); 
+        int i = 0; 
+        while (a[i] != 0) 
+        { 
+            ret.append((char) a[i]); 
+            i++; 
+        } 
+        return ret; 
+    } 
         
     
 }
