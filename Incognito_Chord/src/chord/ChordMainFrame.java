@@ -671,24 +671,23 @@ public class ChordMainFrame extends javax.swing.JFrame {
             String fullFileName = tblSearchResults.getModel().getValueAt(selectedRow, 0).toString();
             //String fullFileName = txtFileName.getText()
             ChordThread.iMsgRecv++;
-            List<Object> peers = chordFileSearch.searchFile(fullFileName);
-            String hops = (String)peers.get(2);
-            long searchLatency = (long)peers.get(1);
-            if((List<Finger>)peers.get(0)!=null && ((List<Finger>)peers.get(0)).size()>0)
+            FileSearchResult searchResult = chordFileSearch.searchFile(fullFileName);
+
+            if(searchResult.getPeers()!=null && searchResult.getPeers().size()>0)
             {
                 List<String> nodeList = new ArrayList<>();
-                ((List<Finger>)peers.get(0)).forEach(peer->{
+                searchResult.getPeers().forEach(peer->{
                     nodeList.add(peer.getAddress()+":"+peer.getPort());
                 });
                 String peerListStr = String.join(", ", nodeList);
                 //JOptionPane.showMessageDialog(null, "File Found at Peers - "+ peerListStr, "File Download", JOptionPane.INFORMATION_MESSAGE);
                 
                 
-                int dialogResult = JOptionPane.showConfirmDialog (null, "File Found at Peers - "+ peerListStr+ ". Do you want to download from a random node?\nSearch Latency = " + searchLatency + "\nSearch hops = " + hops,"Download Confirmation",JOptionPane.YES_NO_OPTION);
+                int dialogResult = JOptionPane.showConfirmDialog (null, "File Found at Peers - "+ peerListStr+ ". Do you want to download from a random node?\nSearch Latency = " + searchResult.getLatency() + "\nSearch hops = " + searchResult.getHopCount(),"Download Confirmation",JOptionPane.YES_NO_OPTION);
                 if(dialogResult == JOptionPane.YES_OPTION){
                     //TODO: Do Download Here
                     int randomNodeId = getRandomIntegerBetweenRange(0, nodeList.size()-1);
-                    Finger selectedPeer = ((List<Finger>)peers.get(0)).get(randomNodeId);
+                    Finger selectedPeer = searchResult.getPeers().get(randomNodeId);
                     int downloadPort = selectedPeer.getPort()+1000;
                     String fileDownloadURL = "http://localhost:"+downloadPort+"/api/download?file="+fullFileName.replaceAll(" ", "");
                     System.out.println("File is Downloading from "+fileDownloadURL+ " to "+txtDownloadFolder.getText());
