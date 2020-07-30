@@ -12,10 +12,12 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.util.Pair;
 
 /**
  *
@@ -29,13 +31,20 @@ public class ChordFileSearch {
         this.node = node;
     } 
     
-    public List<Finger> searchFile(String fullFileName){
+    public List<Object> searchFile(String fullFileName){
         long fileKey = new SHA1Hasher(fullFileName).getLong();
         if (fileKey >= Chord.RING_SIZE) {
             fileKey -= Chord.RING_SIZE;
         }
+        long start = System.nanoTime();
+        
         String searchResponse = findKeyUsingFinger(this.node.getFirstPredecessor(), String.valueOf(fileKey));
-        return decodeServerResponse(searchResponse);
+        
+        // some time passes
+        long end = System.nanoTime();
+        long elapsedTime = end - start; 
+        Pair<List<Finger>, String> decodePair = decodeServerResponse(searchResponse);
+        return Arrays.asList(decodePair.getKey(), elapsedTime, decodePair.getValue());
     } 
     
     private String findKeyUsingFinger(Finger searchFinger, String key){
@@ -45,7 +54,8 @@ public class ChordFileSearch {
             DatagramSocket socket = new DatagramSocket();
 
             // Send query to chord
-            String message = Chord.FIND_VALUE + " " + key;
+            ChordThread.iMsgForw++;
+            String message = Chord.FIND_VALUE + " " + key + " " + 1;
             message = Message.customFormat("0000", message.length()) + " " + message;
 
             byte[] toSend  = message.getBytes();
@@ -87,20 +97,20 @@ public class ChordFileSearch {
         return response;
     }
     
-    private List<Finger> decodeServerResponse(String serverResponse){
+    private Pair<List<Finger>, String> decodeServerResponse(String serverResponse){
          String[] queryContents = serverResponse.split(" ");
          String command = queryContents[1];
+         String hops = queryContents[2];
          
          List<Finger> fingetList = new ArrayList<>();
          
-         if(command.equals(Chord.VALUE_FOUND)){
-             int noOfNodes = Integer.valueOf(queryContents[2]);
-             
+         if(command.equals(Chord.VALUE_FOUND)){ //0005 Chord.VALUE_FOUND + " " + hops + " " + fileOwnerNodes.size() + " " + nodeList
+             int noOfNodes = Integer.valueOf(queryContents[3]);
              for(int i=0; i<noOfNodes; i++){
-                  Finger fileOwner = new Finger(queryContents[3+(2*i)], Integer.valueOf(queryContents[4+(2*i)]));
+                  Finger fileOwner = new Finger(queryContents[4+(2*i)], Integer.valueOf(queryContents[5+(2*i)]));
                   fingetList.add(fileOwner);
              }
          }
-         return fingetList;
+         return new Pair<>(fingetList, hops);
     }
 }

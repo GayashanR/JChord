@@ -27,7 +27,10 @@ import java.util.List;
 public class ChordThread implements Runnable {
     private Node chordNode;
     private DatagramSocket socket = null;
-
+    public static int iMsgRecv = 0;
+    public static int iMsgForw = 0;
+    public static int iMsgAns = 0;
+            
     public ChordThread(Node chordNode, DatagramSocket socket) {
         this.chordNode = chordNode;
         this.socket = socket;
@@ -60,7 +63,8 @@ public class ChordThread implements Runnable {
                 
                 switch (command) {
                     case Chord.FIND_VALUE: {
-                        String response = this.findValue(content);
+                        iMsgRecv++;
+                        String response = this.findValue(content.split(" ")[0], Integer.valueOf(content.split(" ")[1]));
                         System.out.println("Sent: " + response);
                         
                         // Send response back to client
@@ -206,7 +210,7 @@ public class ChordThread implements Runnable {
         }
     }
 
-    private String findValue(String query) {
+    private String findValue(String query, int hops) {
         
         long queryId = Long.valueOf(query);
 
@@ -215,17 +219,17 @@ public class ChordThread implements Runnable {
         // If the query is greater than our predecessor id and less than equal to our id then we have the value
         if (this.doesQueryIdBelongToCurrentNode(queryId)) {
             System.out.println("Arrived On Node Responsible for File Key : "+query);
-            response = findKeyFromCurrentNode(query, this.chordNode);
+            response = findKeyFromCurrentNode(query, this.chordNode, hops);
             
         } else if (this.doesQueryIdBelongToNextNode(queryId)) { 
-            response = findKeyUsingFinger(this.chordNode.getFirstSuccessor(), query);
+            response = findKeyUsingFinger(this.chordNode.getFirstSuccessor(), query, hops);
             
         } else { // We don't have the query so we must search our fingers for it
             long minimumDistance = Chord.RING_SIZE;
             Finger closestPredecessor = null;
 
             this.chordNode.acquire();
-
+            iMsgForw++;
             // Look for a node identifier in the finger table that is less than the key id and closest in the ID space to the key id
             for (Finger finger : this.chordNode.getFingers().values()) {
                 long distance;
@@ -246,7 +250,7 @@ public class ChordThread implements Runnable {
 
             System.out.println("queryid: " + queryId + " minimum distance: " + minimumDistance + " on " + closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
 
-            response = findKeyUsingFinger(closestPredecessor, query);
+            response = findKeyUsingFinger(closestPredecessor, query, hops);
 
             this.chordNode.release();
         }
@@ -384,7 +388,7 @@ public class ChordThread implements Runnable {
         return response;
     }
     
-    private String findKeyFromCurrentNode(String queryId, Node currentNode){
+    private String findKeyFromCurrentNode(String queryId, Node currentNode, int hops){
         String response = "Not found.";
         Map<String, List<Finger>> nodeKeys = currentNode.getKeys();
             
@@ -393,8 +397,9 @@ public class ChordThread implements Runnable {
         if(fileOwnerNodes!=null && fileOwnerNodes.size()>0){
             String nodeList = getOwnerNodeList(fileOwnerNodes);
             System.out.println("File with Key : "+queryId +" found. File Owners : "+nodeList);
-            response = Chord.VALUE_FOUND + " " + fileOwnerNodes.size() + " " + nodeList;
+            response = Chord.VALUE_FOUND + " " + hops + " " + fileOwnerNodes.size() + " " + nodeList;
             response = Message.customFormat("0000", response.length()) + " " + response;
+            iMsgAns++;
         }else{
             System.out.println("File with Key : "+queryId +" Not found.");
             response = "VALUE_NOT_FOUND 0";
@@ -414,16 +419,16 @@ public class ChordThread implements Runnable {
         return sb.toString().trim();
     }
     
-    private String findKeyUsingFinger(Finger searchFinger, String key){
+    private String findKeyUsingFinger(Finger searchFinger, String key, int hops){
         String response = "Not found.";
         try {
             // Open socket to chord node
             DatagramSocket socket = new DatagramSocket();
 
             // Send query to chord
-            String message = Chord.FIND_VALUE + " " + key;
+            String message = Chord.FIND_VALUE + " " + key + " " + (hops + 1);
             message = Message.customFormat("0000", message.length()) + " " + message;
-
+            iMsgForw++;
             byte[] toSend  = message.getBytes();
             InetAddress IPAddress; 
                 try {

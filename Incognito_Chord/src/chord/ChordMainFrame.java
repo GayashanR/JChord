@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.util.Pair;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -132,6 +133,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         viewMenu = new javax.swing.JMenu();
         menuItemFingerTable = new javax.swing.JMenuItem();
         menuItemFileKeys = new javax.swing.JMenuItem();
+        menuItemQMsgDetails = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -308,6 +310,14 @@ public class ChordMainFrame extends javax.swing.JFrame {
             }
         });
         viewMenu.add(menuItemFileKeys);
+
+        menuItemQMsgDetails.setText("Query Message Details");
+        menuItemQMsgDetails.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                menuItemQMsgDetailsActionPerformed(evt);
+            }
+        });
+        viewMenu.add(menuItemQMsgDetails);
 
         jMenuBar1.add(viewMenu);
 
@@ -571,12 +581,12 @@ public class ChordMainFrame extends javax.swing.JFrame {
         try
         {
             DefaultTableModel searchResultsDataModel = (DefaultTableModel) tblSearchResults.getModel();
-        
+            
             while (searchResultsDataModel.getRowCount()>0)
             {
                searchResultsDataModel.removeRow(0);
             }
-
+            
             //Contact Index Server and Get Node List
             String fileQuery = txtFileName.getText().trim();
             String searchMessage = "SER:"+fileQuery; 
@@ -660,22 +670,24 @@ public class ChordMainFrame extends javax.swing.JFrame {
         if(selectedRow!=-1){
             String fullFileName = tblSearchResults.getModel().getValueAt(selectedRow, 0).toString();
             //String fullFileName = txtFileName.getText()
-            List<Finger> peers = chordFileSearch.searchFile(fullFileName);
-            if(peers!=null && peers.size()>0)
+            List<Object> peers = chordFileSearch.searchFile(fullFileName);
+            String hops = (String)peers.get(2);
+            long searchLatency = (long)peers.get(1);
+            if((List<Finger>)peers.get(0)!=null && ((List<Finger>)peers.get(0)).size()>0)
             {
                 List<String> nodeList = new ArrayList<>();
-                peers.forEach(peer->{
+                ((List<Finger>)peers.get(0)).forEach(peer->{
                     nodeList.add(peer.getAddress()+":"+peer.getPort());
                 });
                 String peerListStr = String.join(", ", nodeList);
                 //JOptionPane.showMessageDialog(null, "File Found at Peers - "+ peerListStr, "File Download", JOptionPane.INFORMATION_MESSAGE);
                 
                 
-                int dialogResult = JOptionPane.showConfirmDialog (null, "File Found at Peers - "+ peerListStr+ ". Do you want to download from a random node?","Download Confirmation",JOptionPane.YES_NO_OPTION);
+                int dialogResult = JOptionPane.showConfirmDialog (null, "File Found at Peers - "+ peerListStr+ ". Do you want to download from a random node?\nSearch Latency = " + searchLatency + "\nSearch hops = " + hops,"Download Confirmation",JOptionPane.YES_NO_OPTION);
                 if(dialogResult == JOptionPane.YES_OPTION){
                     //TODO: Do Download Here
                     int randomNodeId = getRandomIntegerBetweenRange(0, nodeList.size()-1);
-                    Finger selectedPeer = peers.get(randomNodeId);
+                    Finger selectedPeer = ((List<Finger>)peers.get(0)).get(randomNodeId);
                     int downloadPort = selectedPeer.getPort()+1000;
                     String fileDownloadURL = "http://localhost:"+downloadPort+"/api/download?file="+fullFileName.replaceAll(" ", "");
                     System.out.println("File is Downloading from "+fileDownloadURL+ " to "+txtDownloadFolder.getText());
@@ -717,6 +729,10 @@ public class ChordMainFrame extends javax.swing.JFrame {
                txtDownloadFolder.setText(file.getAbsolutePath());
             }
     }//GEN-LAST:event_btnSetFolderActionPerformed
+
+    private void menuItemQMsgDetailsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemQMsgDetailsActionPerformed
+        JOptionPane.showMessageDialog(null, "Query Message Received\t\t: " + ChordThread.iMsgRecv + "\nQuery Message Answered\t\t: " + ChordThread.iMsgAns + "\nQuery Message Forwarded\t\t: " + ChordThread.iMsgForw, "Query Message details", JOptionPane.DEFAULT_OPTION);
+    }//GEN-LAST:event_menuItemQMsgDetailsActionPerformed
 
     public static int getRandomIntegerBetweenRange(int min, int max){
         int x = (int)(Math.random()*((max-min)+1))+min;
@@ -904,6 +920,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
     private javax.swing.JList<String> lstSharedFiles;
     private javax.swing.JMenuItem menuItemFileKeys;
     private javax.swing.JMenuItem menuItemFingerTable;
+    private javax.swing.JMenuItem menuItemQMsgDetails;
     private javax.swing.JProgressBar progressBar;
     private javax.swing.JTable tblSearchResults;
     private javax.swing.JTextField txtBSIP;

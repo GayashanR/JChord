@@ -81,7 +81,7 @@ public class IndexServer {
                         for (int i = 0; i < items.size() - 1; i++) {
 
                             for (Map.Entry<String, Integer> e : map.entrySet()) {
-                                if (e.getKey().startsWith(items.get(i + 1))) {
+                                if (e.getKey().contains(items.get(i + 1))) {
                                     resultset.add(e.getKey() + ":" + e.getValue());
                                 }
 
@@ -89,7 +89,7 @@ public class IndexServer {
 
                             result = "SEARCH_RES:" + resultset.size() + ":";
                             result += String.join(":", resultset);
-
+                            resultset.clear();
                         }
 
                     } else if (items.get(0).equals("REM")) { //removing the file name

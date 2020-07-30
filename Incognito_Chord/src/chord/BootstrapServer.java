@@ -18,9 +18,9 @@ public class BootstrapServer {
 
         try
         {
-            sock = new DatagramSocket(5555);
+            sock = new DatagramSocket(55555);
 
-            echo("Bootstrap Server created at 5555. Waiting for incoming data...");
+            echo("Bootstrap Server created at 55555. Waiting for incoming data...");
 
             while(true)
             {
