@@ -229,7 +229,7 @@ public class ChordThread implements Runnable {
             Finger closestPredecessor = null;
 
             this.chordNode.acquire();
-            iMsgForw++;
+            
             // Look for a node identifier in the finger table that is less than the key id and closest in the ID space to the key id
             for (Finger finger : this.chordNode.getFingers().values()) {
                 long distance;

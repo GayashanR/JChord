@@ -670,6 +670,7 @@ public class ChordMainFrame extends javax.swing.JFrame {
         if(selectedRow!=-1){
             String fullFileName = tblSearchResults.getModel().getValueAt(selectedRow, 0).toString();
             //String fullFileName = txtFileName.getText()
+            ChordThread.iMsgRecv++;
             List<Object> peers = chordFileSearch.searchFile(fullFileName);
             String hops = (String)peers.get(2);
             long searchLatency = (long)peers.get(1);

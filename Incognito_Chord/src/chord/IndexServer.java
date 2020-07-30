@@ -81,7 +81,7 @@ public class IndexServer {
                         for (int i = 0; i < items.size() - 1; i++) {
 
                             for (Map.Entry<String, Integer> e : map.entrySet()) {
-                                if (e.getKey().contains(items.get(i + 1))) {
+                                if (e.getKey().toUpperCase().contains(items.get(i + 1).toUpperCase())) {
                                     resultset.add(e.getKey() + ":" + e.getValue());
                                 }
 
