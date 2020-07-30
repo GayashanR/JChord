@@ -10,4 +10,4 @@ JChord is a simple overlay-based solution that allows a set of nodes to share co
  
 # Run
   - Fill necessary information after running node and click `join the network`
-  - Search the network for files with `full/partial search`
+  - Search the network for files with `full/partial search` without considering case sensitivity.
