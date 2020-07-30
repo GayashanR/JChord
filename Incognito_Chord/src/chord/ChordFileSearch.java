@@ -31,7 +31,7 @@ public class ChordFileSearch {
         this.node = node;
     } 
     
-    public List<Object> searchFile(String fullFileName){
+    public FileSearchResult searchFile(String fullFileName){
         long fileKey = new SHA1Hasher(fullFileName).getLong();
         if (fileKey >= Chord.RING_SIZE) {
             fileKey -= Chord.RING_SIZE;
@@ -43,8 +43,9 @@ public class ChordFileSearch {
         // some time passes
         long end = System.nanoTime();
         long elapsedTime = end - start; 
-        Pair<List<Finger>, String> decodePair = decodeServerResponse(searchResponse);
-        return Arrays.asList(decodePair.getKey(), elapsedTime, decodePair.getValue());
+        FileSearchResult searchResult = decodeServerResponse(searchResponse);
+        searchResult.setLatency(elapsedTime);
+        return searchResult;
     } 
     
     private String findKeyUsingFinger(Finger searchFinger, String key){
@@ -97,10 +98,12 @@ public class ChordFileSearch {
         return response;
     }
     
-    private Pair<List<Finger>, String> decodeServerResponse(String serverResponse){
+    private FileSearchResult decodeServerResponse(String serverResponse){
+        FileSearchResult searchResult = new FileSearchResult();
          String[] queryContents = serverResponse.split(" ");
          String command = queryContents[1];
-         String hops = queryContents[2];
+         //String hops = queryContents[2];
+         int hopCount = 0;
          
          List<Finger> fingetList = new ArrayList<>();
          
@@ -110,7 +113,10 @@ public class ChordFileSearch {
                   Finger fileOwner = new Finger(queryContents[4+(2*i)], Integer.valueOf(queryContents[5+(2*i)]));
                   fingetList.add(fileOwner);
              }
+             hopCount = Integer.valueOf(queryContents[2]);
          }
-         return new Pair<>(fingetList, hops);
+         searchResult.setPeers(fingetList);
+         searchResult.setHopCount(hopCount);
+         return searchResult;
     }
 }
