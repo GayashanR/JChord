@@ -12,9 +12,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -648,6 +650,193 @@ public class ChordMainFrame extends javax.swing.JFrame {
     
     private void btnLeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveActionPerformed
         unreg();
+        
+        
+        DatagramSocket socket = null;
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        //Message String creation
+        String message = "REM:";
+        
+        message = message + String.join(":", fileList);
+
+        //publish to index server
+        String message1;
+        byte[] toSend1;
+        InetAddress IPAddress1; 
+        
+        try {
+            toSend1  = message.getBytes();
+            IPAddress1 = InetAddress.getByName(txtISIP.getText());
+            DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, Integer.parseInt(txtISPort.getText()));
+            socket.send(packet);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        socket.close();
+        
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        message1 = Chord.LEAVE_S + " " + this.node.getFirstPredecessor().getAddress() + " " + this.node.getFirstPredecessor().getPort();
+        message1 = Message.customFormat("0000", message1.length()) + " " + message1;
+        toSend1  = message1.getBytes(); 
+        
+        try {
+            IPAddress1 = InetAddress.getByName(this.node.getFirstSuccessor().getAddress());
+            DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, this.node.getFirstSuccessor().getPort()); 
+            socket.send(packet);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        socket.close();
+        
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        
+        message1 = Chord.LEAVE_P + " " + this.node.getFirstSuccessor().getAddress() + " " + this.node.getFirstSuccessor().getPort();
+        message1 = Message.customFormat("0000", message1.length()) + " " + message1;
+        toSend1  = message1.getBytes(); 
+        
+        try {
+            IPAddress1 = InetAddress.getByName(this.node.getFirstPredecessor().getAddress());
+            DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, this.node.getFirstPredecessor().getPort()); 
+            socket.send(packet);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        socket.close();
+        
+        
+        
+                
+//        DatagramSocket socket1 = null;
+//        try {
+//            socket1 = new DatagramSocket();
+//        } catch (SocketException ex) {
+//            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        
+//        for(int i = 0; i < fileList.size(); i++)
+//        {
+//            // Send query to chord
+//            long keyId = new SHA1Hasher(fileList.get(i)).getLong();
+//            message = Chord.FIND_NODE + " " + keyId;
+//            message = Message.customFormat("0000", message.length()) + " " + message;
+//            byte[] toSend  = message.getBytes(); 
+//            InetAddress IPAddress; 
+//            try {
+//                IPAddress = InetAddress.getByName(this.node.getFirstPredecessor().getAddress());
+//                DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, this.node.getFirstPredecessor().getPort()); 
+//                socket1.send(packet);
+//            } catch (UnknownHostException ex) {
+//                Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+//            } catch (IOException ex) {
+//                Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//
+//            System.out.println("Sent: " + message);
+//
+//            byte[] receive = new byte[65535]; 
+//            DatagramPacket DpReceive = new DatagramPacket(receive, receive.length); 
+//            try {
+//                socket1.receive(DpReceive);
+//            } catch (IOException ex) {
+//                Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//
+//            // Read response from chord
+//            String serverResponse = data(receive).toString();
+//
+//
+//            // Parse out address and port
+//            String[] serverResponseFragments = serverResponse.split(" ", 3);
+//            String[] addressFragments = serverResponseFragments[2].split(" ");
+//
+//            if(!this.node.getAddress().equals(addressFragments[0]) || (this.node.getPort() != Integer.valueOf(addressFragments[1])))
+//            {
+//                //Store in the found node
+//                message = Chord.UNSTORE + " " + keyId;
+//                
+//                message = Message.customFormat("0000", message.length()) + " " + message;
+//                toSend  = message.getBytes(); 
+//
+//                try {
+//                    IPAddress = InetAddress.getByName(addressFragments[0]);
+//                    DatagramPacket packet =new DatagramPacket(toSend, toSend.length, IPAddress, Integer.valueOf(addressFragments[1])); 
+//                    socket1.send(packet);
+//                } catch (UnknownHostException ex) {
+//                    Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+//                } catch (IOException ex) {
+//                    Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+//                }
+//
+//                System.out.println("Sent: " + message);
+//
+//            }
+//        }
+//        
+//        socket1.close();
+        
+        
+      
+        
+        
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException ex) {
+            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        for (Map.Entry<String, List<Finger>> entry : this.node.getKeys().entrySet()) {
+            String key = entry.getKey();
+            List<Finger> value = entry.getValue();
+            message1 = Chord.STORE+  " " + key + " " + value.size();  // 0005 STORE_L 35135135 3 IP PORT IP PORT IP PORT
+            String zFingerList = "";
+            for(int i = 0; i < value.size(); i++)
+            {
+                zFingerList += " " + value.get(i).getAddress() + " " + value.get(i).getPort();
+            }
+            message1 += zFingerList;
+            message1 = Message.customFormat("0000", message1.length()) + " " + message1;
+            toSend1  = message1.getBytes(); 
+
+            try {
+                IPAddress1 = InetAddress.getByName(this.node.getFirstSuccessor().getAddress());
+                DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, this.node.getFirstSuccessor().getPort()); 
+                socket.send(packet);
+            } catch (UnknownHostException ex) {
+                Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            System.out.println("Sent: " + message1);
+        }
+        socket.close();
+        
+        
+        this.node.release();
+
+        
         System.exit(JFrame.EXIT_ON_CLOSE);
     }//GEN-LAST:event_btnLeaveActionPerformed
 
