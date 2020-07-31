@@ -44,9 +44,9 @@ public class Message {
             case LEAVE:
                 String peerIpPort = name;
                 if(peerIpPort!=null){
-                    message=appendLength(Chord.LEAVE+" "+ip+" "+port+" "+name);
+                    message=appendLength(Chord.LEAVE_S+" "+ip+" "+port+" "+name);
                 }else{
-                    message=appendLength(Chord.LEAVE+" "+ip+" "+port+" "+"CHILD-LEAVING");
+                    message=appendLength(Chord.LEAVE_S+" "+ip+" "+port+" "+"CHILD-LEAVING");
                 }
                 break;
         }
@@ -80,7 +80,7 @@ public class Message {
     public Message(MessageType type, String ip, int port){
         switch (type){
             case LEAVE:
-                message = appendLength(Chord.LEAVE+" "+ip+" "+port);
+                message = appendLength(Chord.LEAVE_S+" "+ip+" "+port);
                 break;
             case LEAVEOK:
                 message = appendLength(Chord.LEAVEOK+" "+ip+" "+port);

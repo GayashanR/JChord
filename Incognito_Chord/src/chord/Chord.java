@@ -11,9 +11,11 @@ package chord;
  */
 public class Chord {
     public final static String  JOIN                    = "JOIN";
-    public final static String  LEAVE                   = "LEAVE";
+    public final static String  LEAVE_S                 = "LEAVE_S";
+    public final static String  LEAVE_P                 = "LEAVE_P";
     public final static String  LEAVEOK                 = "LEAVEOK";
     public final static String  STORE                   = "STORE";
+    public final static String  UNSTORE                 = "UNSTORE";
     public final static String  STOREOK                 = "STOREOK";
     public final static String  JOINOK                  = "JOINOK";
     public final static String  REG                     = "REG";
