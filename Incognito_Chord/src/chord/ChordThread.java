@@ -10,10 +10,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.logging.Level;
@@ -129,6 +131,35 @@ public class ChordThread implements Runnable {
                         
                         break;
                     }
+                    case Chord.UNSTORE: {
+                        this.chordNode.acquire();
+                        List<Finger> list = chordNode.getKey(content);
+                        System.out.println("UNSTORE : " + content);
+                        if(list == null)
+                        {
+                            list = new ArrayList<>();
+                        }
+                        
+                        for(int i = 0; i < list.size(); i++)
+                        {
+                            if(list.get(i).getAddress().equals(DpReceive.getAddress().getHostAddress()) && list.get(i).getPort() == DpReceive.getPort())
+                            {
+                                list.remove(i);
+                            }
+                        }
+                        
+                        if(list.isEmpty())
+                        {
+                            this.chordNode.removeKey(content);
+                        }
+                        else
+                        {
+                            this.chordNode.addKeys(content, list);
+                        }
+                        
+                        
+                        break;
+                    }
                     case Chord.NODE_FOUND: {
                         String response = this.findNode(content);
                         System.out.println("Sent: " + response);
@@ -161,6 +192,119 @@ public class ChordThread implements Runnable {
                         // Set first predecessor to new finger received in message
                         this.chordNode.setFirstPredecessor(new Finger(address, port));
                         
+                        // Release lock
+                        this.chordNode.release();
+                        
+                        break;
+                    }
+                    case Chord.LEAVE_S: {
+                        // Parse address and port from message
+                        String[] contentFragments = content.split(" ");
+                        String address = contentFragments[0];
+                        int port = Integer.valueOf(contentFragments[1]);
+                        
+                        Finger newSuccessor = new Finger(address, port);
+                        // Acquire lock
+                        this.chordNode.acquire();
+                        
+                        // Set first predecessor to new finger received in message
+                        this.chordNode.setFirstPredecessor(new Finger(address, port));
+                        
+                        
+                        // Release lock
+                        this.chordNode.release();
+                        
+                        break;
+                    }
+                    case Chord.LEAVE_P: {
+                        // Parse address and port from message
+                        String[] contentFragments = content.split(" ");
+                        String address = contentFragments[0];
+                        int port = Integer.valueOf(contentFragments[1]);
+                        
+                        Finger newSuccessor = new Finger(address, port);
+                        
+                        DatagramSocket socket1 = null;
+                        try {
+                            socket1 = new DatagramSocket();
+                        } catch (SocketException ex) {
+                            Logger.getLogger(ChordMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        // Acquire lock
+                        this.chordNode.acquire();
+                        
+                        if (!this.chordNode.getAddress().equals(address) || (this.chordNode.getPort() != port)) {
+                            // Set first Successor to new finger received in message
+                            this.chordNode.setFirstSuccessor(newSuccessor);
+                            
+                            // Tell successor that this node is its new predecessor
+                            String message1 = Chord.JOIN + " " + this.chordNode.getAddress() + " " + this.chordNode.getPort();
+                            message1 = Message.customFormat("0000", message1.length()) + " " + message1;
+                            byte[] toSend1  = message1.getBytes(); 
+                            InetAddress IPAddress1; 
+                            try {
+                                IPAddress1 = InetAddress.getByName(newSuccessor.getAddress());
+                                DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, newSuccessor.getPort()); 
+                                socket.send(packet);
+                            } catch (UnknownHostException ex) {
+                                Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                            } catch (IOException ex) {
+                                Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+
+                            System.out.println("Sent: " + message1);
+                        
+                        }
+                        
+                        BigInteger bigQuery = BigInteger.valueOf(2L);
+                        BigInteger bigSelfId = BigInteger.valueOf(this.chordNode.getId());
+
+                        // Refresh all fingers by asking successor for nodes
+                        for (int i = 0; i < 32; i++) {
+                            BigInteger bigResult = bigQuery.pow(i);
+                            bigResult = bigResult.add(bigSelfId);
+
+                            // Send query to chord
+                            String message1 = Chord.FIND_NODE + " " + bigResult.longValue();
+                            message1 = Message.customFormat("0000", message1.length()) + " " + message1;
+                            byte[] toSend1  = message1.getBytes(); 
+                            InetAddress IPAddress1; 
+                            try {
+                                IPAddress1 = InetAddress.getByName(this.chordNode.getFirstSuccessor().getAddress());
+                                DatagramPacket packet =new DatagramPacket(toSend1, toSend1.length, IPAddress1, this.chordNode.getFirstSuccessor().getPort()); 
+                                socket1.send(packet);
+                            } catch (UnknownHostException ex) {
+                                Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                            } catch (IOException ex) {
+                                Logger.getLogger(ChordThread.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+
+                            System.out.println("Sent: " + message1);
+
+                            receive = new byte[65535]; 
+                            DpReceive = new DatagramPacket(receive, receive.length); 
+                            try {
+                                socket1.receive(DpReceive);
+                            } catch (IOException ex) {
+                                Logger.getLogger(NodeStabilizer.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+
+                            // Read response from chord
+                            String serverResponse = data(receive).toString();
+
+                            // Parse out address and port
+                            String[] serverResponseFragments = serverResponse.split(" ", 3);
+                            String[] addressFragments = serverResponseFragments[2].split(" ");
+
+                            // Add response finger to table
+                            this.chordNode.getFingers().put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
+                            this.chordNode.setFirstSuccessor(this.chordNode.getFingers().get(0));
+                            this.chordNode.setSecondSuccessor(this.chordNode.getFingers().get(1));
+
+                            System.out.println("Received: " + serverResponse);
+                        }
+
+
                         // Release lock
                         this.chordNode.release();
                         
